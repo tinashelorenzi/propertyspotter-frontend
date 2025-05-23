@@ -29,6 +29,257 @@ interface Update {
 const PRIMARY_BLUE = '#225AE3';
 const ACCENT_ORANGE = '#FFA726';
 
+const ProfileTab = () => {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [originalProfile, setOriginalProfile] = useState<any>(null);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveToast, setSaveToast] = useState<{ message: string; type: 'success' | 'error'; isVisible: boolean }>({ message: '', type: 'success', isVisible: false });
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/users/profile/`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setProfile(data);
+          setOriginalProfile(data);
+        } else {
+          setError('Failed to load profile.');
+        }
+      } catch (err) {
+        setError('An error occurred while loading profile.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const handleSave = async () => {
+    if (password && password !== confirmPassword) {
+      setSaveToast({ message: 'Passwords do not match.', type: 'error', isVisible: true });
+      return;
+    }
+    setSaving(true);
+    const fieldsToUpdate: any = {};
+    // Only include fields that have changed
+    [
+      'first_name',
+      'last_name',
+      'phone',
+      'bank_name',
+      'bank_branch_code',
+      'account_number',
+      'account_name',
+      'account_type',
+    ].forEach((key) => {
+      if (profile[key] !== originalProfile[key]) {
+        fieldsToUpdate[key] = profile[key];
+      }
+    });
+    if (password) {
+      fieldsToUpdate.password = password;
+    }
+    if (Object.keys(fieldsToUpdate).length === 0) {
+      setSaveToast({ message: 'No changes to save.', type: 'error', isVisible: true });
+      setSaving(false);
+      return;
+    }
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/users/profile/update/`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(fieldsToUpdate),
+      });
+      if (response.ok) {
+        setSaveToast({ message: 'Profile updated successfully!', type: 'success', isVisible: true });
+        const updated = { ...originalProfile, ...fieldsToUpdate };
+        setProfile(updated);
+        setOriginalProfile(updated);
+        setPassword('');
+        setConfirmPassword('');
+      } else {
+        const err = await response.json();
+        setSaveToast({ message: err.message || 'Failed to update profile.', type: 'error', isVisible: true });
+      }
+    } catch (err) {
+      setSaveToast({ message: 'An error occurred while saving.', type: 'error', isVisible: true });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#225AE3]"></div>
+      </div>
+    );
+  }
+  if (error) {
+    return <div className="text-red-500 text-center py-8">{error}</div>;
+  }
+  if (!profile) return null;
+
+  return (
+    <form className="max-w-xl mx-auto bg-white rounded-xl shadow p-8 space-y-6" onSubmit={e => { e.preventDefault(); handleSave(); }}>
+      <h2 className="text-2xl font-bold text-[#225AE3] mb-4">Profile Settings</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Email</label>
+          <input
+            type="email"
+            value={profile.email}
+            readOnly
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 shadow-sm focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Username</label>
+          <input
+            type="text"
+            value={profile.username}
+            readOnly
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 text-gray-500 shadow-sm focus:outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">First Name</label>
+          <input
+            type="text"
+            value={profile.first_name}
+            onChange={e => setProfile({ ...profile, first_name: e.target.value })}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Last Name</label>
+          <input
+            type="text"
+            value={profile.last_name}
+            onChange={e => setProfile({ ...profile, last_name: e.target.value })}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+          />
+        </div>
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-gray-700">Phone</label>
+          <input
+            type="tel"
+            value={profile.phone}
+            onChange={e => setProfile({ ...profile, phone: e.target.value })}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+          />
+        </div>
+      </div>
+      {/* Banking Details */}
+      <div className="pt-6">
+        <h3 className="text-lg font-semibold text-[#225AE3] mb-2">Banking Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Bank Name</label>
+            <input
+              type="text"
+              value={profile.bank_name || ''}
+              onChange={e => setProfile({ ...profile, bank_name: e.target.value })}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Bank Branch Code</label>
+            <input
+              type="text"
+              value={profile.bank_branch_code || ''}
+              onChange={e => setProfile({ ...profile, bank_branch_code: e.target.value })}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Account Number</label>
+            <input
+              type="text"
+              value={profile.account_number || ''}
+              onChange={e => setProfile({ ...profile, account_number: e.target.value })}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Account Name</label>
+            <input
+              type="text"
+              value={profile.account_name || ''}
+              onChange={e => setProfile({ ...profile, account_name: e.target.value })}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700">Account Type</label>
+            <input
+              type="text"
+              value={profile.account_type || ''}
+              onChange={e => setProfile({ ...profile, account_type: e.target.value })}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+            />
+          </div>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700">New Password</label>
+          <input
+            type="password"
+            placeholder="Enter new password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Confirm Password</label>
+          <input
+            type="password"
+            placeholder="Confirm new password"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end pt-4">
+        <button
+          type="submit"
+          disabled={saving}
+          className="px-6 py-2 bg-[#225AE3] text-white rounded-lg font-semibold shadow hover:bg-[#1a4bc4] transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center"
+        >
+          {saving && <span className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></span>}
+          Save Changes
+        </button>
+      </div>
+      {saveToast.isVisible && (
+        <Toast
+          message={saveToast.message}
+          type={saveToast.type}
+          onClose={() => setSaveToast(prev => ({ ...prev, isVisible: false }))}
+        />
+      )}
+    </form>
+  );
+};
+
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -336,9 +587,7 @@ const Dashboard = () => {
             )}
             {activeTab === 'leads' && <LeadsTab user={user} />}
             {activeTab === 'profile' && (
-              <div className="text-center py-12">
-                <p className="text-gray-500">Profile settings coming soon...</p>
-              </div>
+              <ProfileTab />
             )}
           </div>
         </div>

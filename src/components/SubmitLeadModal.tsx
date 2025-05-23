@@ -60,6 +60,17 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const resetForm = () => {
+    setFormData({
+      first_name: '',
+      last_name: '',
+      email: '',
+      phone: '',
+      notes_text: '',
+    });
+    setImages([]);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -73,21 +84,27 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
         if (value) formDataToSend.append(key, value);
       });
 
-      // Add images if any
+      // Add images with proper structure expected by Django
       images.forEach((image, index) => {
-        formDataToSend.append(`images[${index}][image]`, image.file);
+        formDataToSend.append(`image_${index}`, image.file);
         if (image.description) {
-          formDataToSend.append(`images[${index}][description]`, image.description);
+          formDataToSend.append(`description_${index}`, image.description);
         }
       });
+
+      // Add image count for backend processing
+      formDataToSend.append('image_count', images.length.toString());
 
       const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/leads/submit/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          // Don't set Content-Type header - let browser set it for FormData
         },
         body: formDataToSend,
       });
+
+      const responseData = await response.json();
 
       if (response.ok) {
         setToast({
@@ -95,17 +112,19 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
           type: 'success',
           isVisible: true,
         });
+        resetForm();
         onSubmitSuccess();
         onClose();
       } else {
-        const error = await response.json();
+        console.error('Server response:', responseData);
         setToast({
-          message: error.message || 'Failed to submit lead. Please try again.',
+          message: responseData.message || responseData.detail || 'Failed to submit lead. Please try again.',
           type: 'error',
           isVisible: true,
         });
       }
     } catch (error) {
+      console.error('Submit error:', error);
       setToast({
         message: 'An error occurred. Please try again.',
         type: 'error',
@@ -290,4 +309,4 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
   );
 };
 
-export default SubmitLeadModal; 
+export default SubmitLeadModal;
