@@ -1,72 +1,27 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import Toast from './Toast';
+import { Link } from 'react-router-dom';
 
-const Login = () => {
-  const navigate = useNavigate();
-  const { login } = useAuth();
+const AgencyLoginPage = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: 'success' | 'error';
-    isVisible: boolean;
-  }>({
-    message: '',
-    type: 'success',
-    isVisible: false,
-  });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/users/login/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        login(data.token, data.user);
-        navigate('/dashboard');
-      } else {
-        setToast({
-          message: data.message || 'Login failed. Please check your credentials.',
-          type: 'error',
-          isVisible: true,
-        });
-      }
-    } catch (error) {
-      setToast({
-        message: 'An error occurred. Please try again.',
-        type: 'error',
-        isVisible: true,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    // No API logic yet
+    setTimeout(() => setIsLoading(false), 1000);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative">
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center py-12 sm:px-6 lg:px-8 relative">
       {/* Floating Home Button */}
       <Link
         to="/"
@@ -79,10 +34,12 @@ const Login = () => {
       </Link>
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Sign in to your account
+          Agency Admin Login
         </h2>
+        <p className="mt-2 text-center text-sm text-gray-600">
+          Sign in to manage your agency account.
+        </p>
       </div>
-
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
           <form className="space-y-6" onSubmit={handleSubmit}>
@@ -103,7 +60,6 @@ const Login = () => {
                 />
               </div>
             </div>
-
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
@@ -121,7 +77,6 @@ const Login = () => {
                 />
               </div>
             </div>
-
             <div>
               <button
                 type="submit"
@@ -141,16 +96,8 @@ const Login = () => {
           </form>
         </div>
       </div>
-
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(prev => ({ ...prev, isVisible: false }))}
-        />
-      )}
     </div>
   );
 };
 
-export default Login; 
+export default AgencyLoginPage; 

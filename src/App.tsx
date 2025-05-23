@@ -7,6 +7,7 @@ import HowItWorksPage from './pages/HowItWorksPage'
 import RegisterPage from './pages/RegisterPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
 import NotFoundPage from './pages/NotFoundPage'
+import AgencyLoginPage from './pages/AgencyLoginPage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -28,6 +29,7 @@ const AppRoutes = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+      <Route path="/agency-login" element={<AgencyLoginPage />} />
       <Route
         path="/dashboard"
         element={

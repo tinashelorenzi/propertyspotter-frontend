@@ -75,27 +75,15 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans flex items-center justify-center">
-      <div className="fixed inset-0 -z-10 bg-gradient-to-tr from-[#E9EEFB] via-white to-[#225AE3]/10 animate-gradient-move" />
-      
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center py-12 sm:px-6 lg:px-8 relative">
       {/* Floating Home Button */}
-      <Link 
-        to="/" 
-        className="fixed top-4 left-4 bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-shadow duration-200"
+      <Link
+        to="/"
+        className="fixed top-4 left-4 z-50 bg-white rounded-full shadow-lg p-2 hover:shadow-xl transition-shadow border border-gray-200"
+        title="Back to Home"
       >
-        <svg 
-          xmlns="http://www.w3.org/2000/svg" 
-          className="h-6 w-6 text-[#225AE3]" 
-          fill="none" 
-          viewBox="0 0 24 24" 
-          stroke="currentColor"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" 
-          />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#225AE3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
         </svg>
       </Link>
 

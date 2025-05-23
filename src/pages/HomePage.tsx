@@ -167,6 +167,18 @@ export default function HomePage() {
           animation: float-slower 10s ease-in-out infinite;
         }
       `}</style>
+
+      <footer className="w-full bg-white border-t border-gray-200 mt-16 py-6">
+        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between">
+          <span className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} PropertySpotter. All rights reserved.</span>
+          <a
+            href="/agency-login"
+            className="mt-2 md:mt-0 text-[#225AE3] font-semibold hover:underline hover:text-blue-700 transition-colors"
+          >
+            Agency Admin Login
+          </a>
+        </div>
+      </footer>
     </div>
   )
 } 
