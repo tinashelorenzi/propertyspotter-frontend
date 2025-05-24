@@ -2,6 +2,15 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
+interface Agency {
+  id: string;
+  name: string;
+  email: string;
+  phone: string | null;
+  address: string;
+  license_valid_until: string | null;
+}
+
 interface LoginResponse {
   token: string;
   user: {
@@ -12,6 +21,7 @@ interface LoginResponse {
     first_name: string;
     last_name: string;
     is_active: boolean;
+    agency: Agency;
   };
 }
 
@@ -43,9 +53,10 @@ const AgencyLoginPage = () => {
       );
       const { token, user } = response.data;
 
-      // Store the token and user data
+      // Store the token, user data, and agency information
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('agency', JSON.stringify(user.agency));
 
       // Route based on user role
       if (user.role === 'Agency_Admin') {

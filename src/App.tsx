@@ -10,6 +10,7 @@ import NotFoundPage from './pages/NotFoundPage'
 import AgencyLoginPage from './pages/AgencyLoginPage';
 import AgencyDashboard from './pages/AgencyDashboard';
 import AgentDashboard from './pages/AgentDashboard';
+import SetPassword from './pages/SetPassword';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -78,6 +79,7 @@ const AppRoutes = () => {
           </PrivateRoute>
         }
       />
+      <Route path="/set-password/:token" element={<SetPassword />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
