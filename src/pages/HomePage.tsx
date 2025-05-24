@@ -175,7 +175,7 @@ export default function HomePage() {
             href="/agency-login"
             className="mt-2 md:mt-0 text-[#225AE3] font-semibold hover:underline hover:text-blue-700 transition-colors"
           >
-            Agency Admin Login
+            Agency/Agent Login
           </a>
         </div>
       </footer>

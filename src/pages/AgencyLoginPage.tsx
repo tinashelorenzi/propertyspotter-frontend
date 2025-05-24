@@ -1,23 +1,64 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import axios from 'axios';
+
+interface LoginResponse {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    username: string;
+    role: 'Agency_Admin' | 'Agent';
+    first_name: string;
+    last_name: string;
+    is_active: boolean;
+  };
+}
 
 const AgencyLoginPage = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setError(null); // Clear error when user types
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    // No API logic yet
-    setTimeout(() => setIsLoading(false), 1000);
+    setError(null);
+
+    try {
+      const backendUrl = import.meta.env.VITE_BACKEND_API;
+      const response = await axios.post<LoginResponse>(
+        `${backendUrl}api/users/login/`,
+        formData
+      );
+      const { token, user } = response.data;
+
+      // Store the token and user data
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+
+      // Route based on user role
+      if (user.role === 'Agency_Admin') {
+        navigate('/agency-dashboard');
+      } else if (user.role === 'Agent') {
+        navigate('/agent-dashboard');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Invalid email or password. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -34,14 +75,19 @@ const AgencyLoginPage = () => {
       </Link>
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Agency Admin Login
+          Agency/Agent Login
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Sign in to manage your agency account.
+          Sign in to manage your account.
         </p>
       </div>
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">

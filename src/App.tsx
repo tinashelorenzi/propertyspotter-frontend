@@ -8,6 +8,8 @@ import RegisterPage from './pages/RegisterPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
 import NotFoundPage from './pages/NotFoundPage'
 import AgencyLoginPage from './pages/AgencyLoginPage';
+import AgencyDashboard from './pages/AgencyDashboard';
+import AgentDashboard from './pages/AgentDashboard';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -21,6 +23,28 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   return user ? <>{children}</> : <Navigate to="/login" />;
 };
 
+const AgencyRoute = ({ children }: { children: React.ReactNode }) => {
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  if (!user) {
+    return <Navigate to="/agency-login" />;
+  }
+  if (user.role !== 'Agency_Admin') {
+    return <Navigate to="/agent-dashboard" />;
+  }
+  return <>{children}</>;
+};
+
+const AgentRoute = ({ children }: { children: React.ReactNode }) => {
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  if (!user) {
+    return <Navigate to="/agency-login" />;
+  }
+  if (user.role !== 'Agent') {
+    return <Navigate to="/agency-dashboard" />;
+  }
+  return <>{children}</>;
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -30,6 +54,22 @@ const AppRoutes = () => {
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
       <Route path="/agency-login" element={<AgencyLoginPage />} />
+      <Route
+        path="/agency-dashboard"
+        element={
+          <AgencyRoute>
+            <AgencyDashboard />
+          </AgencyRoute>
+        }
+      />
+      <Route
+        path="/agent-dashboard"
+        element={
+          <AgentRoute>
+            <AgentDashboard />
+          </AgentRoute>
+        }
+      />
       <Route
         path="/dashboard"
         element={
