@@ -577,7 +577,15 @@ const AgentDashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex items-center space-x-4">
-              <h1 className="text-xl font-semibold text-gray-900">Agent Dashboard</h1>
+              <img 
+                src="https://raw.githubusercontent.com/tinashelorenzi/propertyspotter-prod/refs/heads/main/static/images/logo.png"
+                alt="PropertySpotter Logo"
+                className="h-10 w-auto"
+              />
+              <div>
+                <h1 className="text-xl font-semibold text-gray-900">PropertySpotter</h1>
+                <p className="text-sm text-gray-500">Your Property, Our Treasure</p>
+              </div>
               <span className="text-sm text-gray-500">({user.agency_name})</span>
             </div>
             <div className="flex items-center space-x-4">

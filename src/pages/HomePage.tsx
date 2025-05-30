@@ -34,7 +34,17 @@ export default function HomePage() {
       <nav className="bg-white/80 backdrop-blur shadow-sm fixed w-full z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <Link to="/" className="text-2xl font-extrabold tracking-tight text-[#225AE3]">PropertySpotter</Link>
+            <div className="flex items-center space-x-4">
+              <img 
+                src="https://raw.githubusercontent.com/tinashelorenzi/propertyspotter-prod/refs/heads/main/static/images/logo.png"
+                alt="PropertySpotter Logo"
+                className="h-10 w-auto"
+              />
+              <div>
+                <Link to="/" className="text-2xl font-extrabold tracking-tight text-[#225AE3]">PropertySpotter</Link>
+                <p className="text-sm text-gray-500">Your Property, Our Treasure</p>
+              </div>
+            </div>
             <div className="flex items-center space-x-4">
               <Link to="/login" className="btn-secondary">Sign In</Link>
               <Link to="/register" className="btn-primary text-lg shadow-xl">Get Started</Link>
