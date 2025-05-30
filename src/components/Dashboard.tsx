@@ -528,7 +528,7 @@ const Dashboard = () => {
                     Stay Informed. Seize Every Opportunity.
                   </h2>
                   <p className="text-gray-700 text-lg mt-2">
-                    Track your latest updates, lead progress, and commission opportunities.<br />
+                    Track your latest updates, lead progress, and earning opportunities.<br />
                     Every update brings you closer to your next reward!
                   </p>
                 </div>

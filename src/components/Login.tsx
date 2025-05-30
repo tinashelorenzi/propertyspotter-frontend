@@ -46,7 +46,17 @@ const Login = () => {
 
       if (response.ok) {
         login(data.token, data.user);
-        navigate('/dashboard');
+        
+        // Route based on user role
+        if (data.user.role === 'Spotter') {
+          navigate('/dashboard');
+        } else if (data.user.role === 'Agency_Admin') {
+          navigate('/agency-dashboard');
+        } else if (data.user.role === 'Agent') {
+          navigate('/agent-dashboard');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         setToast({
           message: data.message || 'Login failed. Please check your credentials.',

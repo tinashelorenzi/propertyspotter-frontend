@@ -53,6 +53,8 @@ interface Lead {
   last_name: string;
   email: string;
   phone: string;
+  street_address: string;
+  suburb: string;
   status: 'new' | 'assigned' | 'in_progress' | 'completed' | 'closed';
   notes_text: string;
   images: LeadImage[];
@@ -126,6 +128,10 @@ const AgencyDashboard = () => {
   });
   const [isInviting, setIsInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [isDeactivating, setIsDeactivating] = useState<string | null>(null);
+  const [deactivateError, setDeactivateError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isReactivating, setIsReactivating] = useState<string | null>(null);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -333,6 +339,105 @@ const AgencyDashboard = () => {
     }
   };
 
+  const handleDeactivateAgent = async (agentId: string) => {
+    if (!agency) return;
+    
+    setIsDeactivating(agentId);
+    setDeactivateError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const backendUrl = import.meta.env.VITE_BACKEND_API;
+      await axios.patch(
+        `${backendUrl}api/users/${agentId}/deactivate/`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Refresh agents list
+      const response = await axios.get<AgentsResponse>(
+        `${backendUrl}api/users/agencies/${agency.id}/agents/`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setAgents(response.data.results);
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        activeAgents: response.data.results.filter(agent => agent.is_active).length,
+      }));
+    } catch (err) {
+      console.error('Error deactivating agent:', err);
+      setDeactivateError('Failed to deactivate agent. Please try again.');
+    } finally {
+      setIsDeactivating(null);
+    }
+  };
+
+  const handleReactivateAgent = async (agentId: string) => {
+    if (!agency) return;
+    
+    setIsReactivating(agentId);
+    setDeactivateError(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const backendUrl = import.meta.env.VITE_BACKEND_API;
+      await axios.patch(
+        `${backendUrl}api/users/${agentId}/reactivate/`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      // Refresh agents list
+      const response = await axios.get<AgentsResponse>(
+        `${backendUrl}api/users/agencies/${agency.id}/agents/`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setAgents(response.data.results);
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        activeAgents: response.data.results.filter(agent => agent.is_active).length,
+      }));
+    } catch (err) {
+      console.error('Error reactivating agent:', err);
+      setDeactivateError('Failed to reactivate agent. Please try again.');
+    } finally {
+      setIsReactivating(null);
+    }
+  };
+
+  // Filter agents based on search query
+  const filteredAgents = agents.filter(agent => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      agent.first_name.toLowerCase().includes(searchLower) ||
+      agent.last_name.toLowerCase().includes(searchLower) ||
+      agent.email.toLowerCase().includes(searchLower) ||
+      agent.phone.toLowerCase().includes(searchLower)
+    );
+  });
+
   if (!user || !agency) {
     return <div>Loading...</div>;
   }
@@ -538,9 +643,12 @@ const AgencyDashboard = () => {
                           Status
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Assigned Agent
+                          Suburb
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Assigned Agent
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Created
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -571,6 +679,11 @@ const AgencyDashboard = () => {
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(lead.status)}`}>
                               {lead.status.replace('_', ' ')}
                             </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {lead.suburb}
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm text-gray-900">
@@ -610,6 +723,34 @@ const AgencyDashboard = () => {
                   Add New Agent
                 </button>
               </div>
+
+              {/* Search Bar */}
+              <div className="mb-6">
+                <div className="relative">
+                  <input
+                    type="text"
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-[#225AE3] focus:border-[#225AE3] sm:text-sm"
+                    placeholder="Search agents..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg
+                      className="h-5 w-5 text-gray-400"
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
               
               {isLoadingAgents ? (
                 <div className="text-center py-12">
@@ -620,9 +761,9 @@ const AgencyDashboard = () => {
                 <div className="text-center py-12 text-red-500">
                   {agentsError}
                 </div>
-              ) : agents.length === 0 ? (
+              ) : filteredAgents.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
-                  No agents added yet
+                  {searchQuery ? 'No agents found matching your search' : 'No agents added yet'}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -647,7 +788,7 @@ const AgencyDashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {agents.map((agent) => (
+                      {filteredAgents.map((agent) => (
                         <tr key={agent.id}>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center">
@@ -656,14 +797,13 @@ const AgencyDashboard = () => {
                                   {agent.first_name} {agent.last_name}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  {agent.username}
+                                  {agent.email}
                                 </div>
                               </div>
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{agent.email}</div>
-                            <div className="text-sm text-gray-500">{agent.phone}</div>
+                            <div className="text-sm text-gray-900">{agent.phone}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -676,9 +816,23 @@ const AgencyDashboard = () => {
                             {new Date(agent.created_at).toLocaleDateString()}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button className="text-red-600 hover:text-red-800">
-                              Deactivate
-                            </button>
+                            {agent.is_active ? (
+                              <button
+                                onClick={() => handleDeactivateAgent(agent.id)}
+                                disabled={isDeactivating === agent.id}
+                                className="text-red-600 hover:text-red-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isDeactivating === agent.id ? 'Deactivating...' : 'Deactivate'}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleReactivateAgent(agent.id)}
+                                disabled={isReactivating === agent.id}
+                                className="text-green-600 hover:text-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isReactivating === agent.id ? 'Reactivating...' : 'Reactivate'}
+                              </button>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -749,9 +903,15 @@ const AgencyDashboard = () => {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-sm font-medium text-gray-500">Assigned Agent</dt>
+                      <dt className="text-sm font-medium text-gray-500">Spotter</dt>
                       <dd className="mt-1 text-sm text-gray-900">
-                        {selectedLead.agent ? `${selectedLead.agent.first_name} ${selectedLead.agent.last_name}` : 'Unassigned'}
+                        {selectedLead.spotter.first_name} {selectedLead.spotter.last_name}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm font-medium text-gray-500">Suburb</dt>
+                      <dd className="mt-1 text-sm text-gray-900">
+                        {selectedLead.suburb}
                       </dd>
                     </div>
                   </dl>
@@ -1023,6 +1183,22 @@ const AgencyDashboard = () => {
               </form>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Add error message display */}
+      {deactivateError && (
+        <div className="fixed bottom-4 right-4 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          <span className="block sm:inline">{deactivateError}</span>
+          <button
+            onClick={() => setDeactivateError(null)}
+            className="absolute top-0 bottom-0 right-0 px-4 py-3"
+          >
+            <svg className="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <title>Close</title>
+              <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
+            </svg>
+          </button>
         </div>
       )}
     </div>

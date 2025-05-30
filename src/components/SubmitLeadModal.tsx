@@ -18,6 +18,8 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
     last_name: '',
     email: '',
     phone: '',
+    street_address: '',
+    suburb: '',
     notes_text: '',
   });
   const [images, setImages] = useState<ImageFile[]>([]);
@@ -66,6 +68,8 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
       last_name: '',
       email: '',
       phone: '',
+      street_address: '',
+      suburb: '',
       notes_text: '',
     });
     setImages([]);
@@ -153,7 +157,7 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">First Name</label>
               <input
@@ -180,7 +184,7 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
               <input
@@ -200,6 +204,33 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
                 id="phone"
                 name="phone"
                 value={formData.phone}
+                onChange={handleChange}
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="street_address" className="block text-sm font-medium text-gray-700">Street Address</label>
+              <input
+                type="text"
+                id="street_address"
+                name="street_address"
+                value={formData.street_address}
+                onChange={handleChange}
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+              />
+            </div>
+            <div>
+              <label htmlFor="suburb" className="block text-sm font-medium text-gray-700">Suburb</label>
+              <input
+                type="text"
+                id="suburb"
+                name="suburb"
+                value={formData.suburb}
                 onChange={handleChange}
                 required
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
