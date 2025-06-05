@@ -35,14 +35,13 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-4">
-              <img 
-                src="https://raw.githubusercontent.com/tinashelorenzi/propertyspotter-prod/refs/heads/main/static/images/logo.png"
-                alt="PropertySpotter Logo"
-                className="h-10 w-auto"
-              />
-              <div>
-                <Link to="/" className="text-2xl font-extrabold tracking-tight text-[#225AE3]">PropertySpotter</Link>
-                <p className="text-sm text-gray-500">Your Property, Our Treasure</p>
+              <div className="flex flex-col items-center">
+                <img 
+                  src="https://raw.githubusercontent.com/tinashelorenzi/propertyspotter-prod/refs/heads/main/static/images/logo.png"
+                  alt="PropertySpotter Logo"
+                  className="h-10 w-auto"
+                />
+                <p className="text-sm text-gray-500 mt-1">Your property, our pleasure</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -77,8 +76,8 @@ export default function HomePage() {
           <div className="bg-white rounded-3xl shadow-2xl p-8 flex flex-col md:flex-row items-center gap-8 border-t-4 border-[#225AE3]">
             <img src="https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=400&q=80" alt="Property" className="w-32 h-32 rounded-2xl object-cover border-4 border-[#E9EEFB]" />
             <div className="text-left">
-              <h3 className="text-2xl font-bold text-[#225AE3] mb-1">"I spotted a house on my street and earned $500!"</h3>
-              <p className="text-gray-600">— Alex, Property Spotter</p>
+              <h3 className="text-2xl font-bold text-[#225AE3] mb-1">"I spotted a house on my street and earned R12000!"</h3>
+              <p className="text-gray-600">— Thabile, Centurion</p>
             </div>
           </div>
         </div>
@@ -112,6 +111,39 @@ export default function HomePage() {
           <Link to="/register" className="btn-primary text-lg px-10 py-4 shadow-xl">Create Your Free Account</Link>
         </div>
       </section>
+
+      {/* Testimonials */}
+      <div className="bg-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
+              Trusted by Property Spotters
+            </h2>
+            <p className="mt-4 text-lg text-gray-500">
+              Join our community of successful property spotters
+            </p>
+          </div>
+
+          <div className="mt-12">
+            <div className="bg-gray-50 rounded-2xl p-8 shadow-sm">
+              <div className="flex items-center space-x-4">
+                <div className="flex-shrink-0">
+                  <div className="h-12 w-12 rounded-full bg-[#225AE3] flex items-center justify-center">
+                    <span className="text-white text-lg font-semibold">TS</span>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900">Thabo Sibiya</h3>
+                  <p className="text-gray-500">Property Spotter, Johannesburg</p>
+                </div>
+              </div>
+              <p className="mt-4 text-gray-600">
+                "I spotted a house in my neighborhood and earned R5,000!"
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Footer */}
       <footer className="bg-gray-50 py-12 mt-8 border-t border-[#E9EEFB]">
