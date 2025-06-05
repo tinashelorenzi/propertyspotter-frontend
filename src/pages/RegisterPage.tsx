@@ -42,7 +42,7 @@ const RegisterPage = () => {
     };
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_API}/api/users/register/`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/users/register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

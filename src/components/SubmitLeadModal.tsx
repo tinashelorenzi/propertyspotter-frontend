@@ -21,6 +21,7 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
     street_address: '',
     suburb: '',
     notes_text: '',
+    preferred_agent: '',
   });
   const [images, setImages] = useState<ImageFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,6 +72,7 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
       street_address: '',
       suburb: '',
       notes_text: '',
+      preferred_agent: '',
     });
     setImages([]);
   };
@@ -186,14 +188,13 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email (Optional)</label>
               <input
                 type="email"
                 id="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                required
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
               />
             </div>
@@ -236,6 +237,19 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
               />
             </div>
+          </div>
+
+          <div>
+            <label htmlFor="preferred_agent" className="block text-sm font-medium text-gray-700">Preferred Agent (Optional)</label>
+            <input
+              type="text"
+              id="preferred_agent"
+              name="preferred_agent"
+              value={formData.preferred_agent}
+              onChange={handleChange}
+              placeholder="e.g., Jane Smith - ABC Real Estate"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+            />
           </div>
 
           <div>

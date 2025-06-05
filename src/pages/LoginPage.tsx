@@ -92,7 +92,7 @@ const LoginPage = () => {
       } else {
         console.error('Login failed:', data);
         setToast({
-          message: data.message || 'Login failed. Please check your credentials.',
+          message: (data as any).message || 'Login failed. Please check your credentials.',
           type: 'error',
           isVisible: true,
         });

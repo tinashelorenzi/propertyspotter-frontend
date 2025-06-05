@@ -19,7 +19,7 @@ const VerifyEmailPage = () => {
   useEffect(() => {
     const verifyEmail = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_BACKEND_API}/api/users/verify-email/`, {
+        const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/users/verify-email/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
