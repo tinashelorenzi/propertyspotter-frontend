@@ -162,11 +162,19 @@ export default function HomePage() {
               </ul>
             </div>
             <div>
+              <h4 className="text-sm font-semibold text-gray-900 mb-4">Legal</h4>
+              <ul className="space-y-2">
+                <li><Link to="/terms-of-service" className="text-gray-600 hover:text-[#225AE3]">Terms of Service</Link></li>
+                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Privacy Policy</a></li>
+                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Cookie Policy</a></li>
+              </ul>
+            </div>
+            <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-4">Resources</h4>
               <ul className="space-y-2">
                 <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Blog</a></li>
                 <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Help Center</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Terms of Service</a></li>
+                <li><Link to="/how-it-works" className="text-gray-600 hover:text-[#225AE3]">How It Works</Link></li>
               </ul>
             </div>
             <div>
@@ -178,8 +186,14 @@ export default function HomePage() {
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-200 mt-12 pt-8 text-center text-gray-600">
-            <p>&copy; 2024 PropertySpotter. All rights reserved.</p>
+          <div className="border-t border-gray-200 mt-12 pt-8 flex flex-col md:flex-row items-center justify-between">
+            <p className="text-gray-600">&copy; 2025 PropertySpotter. All rights reserved.</p>
+            <a
+              href="/agency-login"
+              className="mt-2 md:mt-0 text-[#225AE3] font-semibold hover:underline hover:text-blue-700 transition-colors"
+            >
+              Agency/Agent Login
+            </a>
           </div>
         </div>
       </footer>
@@ -209,18 +223,6 @@ export default function HomePage() {
           animation: float-slower 10s ease-in-out infinite;
         }
       `}</style>
-
-      <footer className="w-full bg-white border-t border-gray-200 mt-16 py-6">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between">
-          <span className="text-gray-500 text-sm">&copy; {new Date().getFullYear()} PropertySpotter. All rights reserved.</span>
-          <a
-            href="/agency-login"
-            className="mt-2 md:mt-0 text-[#225AE3] font-semibold hover:underline hover:text-blue-700 transition-colors"
-          >
-            Agency/Agent Login
-          </a>
-        </div>
-      </footer>
     </div>
   )
-} 
+}

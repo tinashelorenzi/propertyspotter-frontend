@@ -11,6 +11,7 @@ import AgencyLoginPage from './pages/AgencyLoginPage';
 import AgencyDashboard from './pages/AgencyDashboard';
 import AgentDashboard from './pages/AgentDashboard';
 import SetPassword from './pages/SetPassword';
+import TermsOfServicePage from './pages/TermsOfServicePage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -51,6 +52,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/how-it-works" element={<HowItWorksPage />} />
+      <Route path="/terms-of-service" element={<TermsOfServicePage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
