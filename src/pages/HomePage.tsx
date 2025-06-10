@@ -174,7 +174,7 @@ export default function HomePage() {
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-4">Resources</h4>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Blog</a></li>
+                <li><a href="/blog" className="text-gray-600 hover:text-[#225AE3]">Blog</a></li>
                 <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Help Center</a></li>
                 <li><Link to="/how-it-works" className="text-gray-600 hover:text-[#225AE3]">How It Works</Link></li>
               </ul>
