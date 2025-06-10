@@ -41,7 +41,7 @@ export default function HomePage() {
                   alt="PropertySpotter Logo"
                   className="h-10 w-auto"
                 />
-                <p className="text-sm text-gray-500 mt-1">Your property, our pleasure</p>
+                <p className="text-sm text-gray-500 mt-1">Your property, our treasure</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
