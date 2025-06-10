@@ -19,7 +19,6 @@ const TermsOfServicePage = () => {
                 className="h-10 w-auto"
               />
               <div>
-                <h1 className="text-xl font-bold text-[#225AE3]">PropertySpotter</h1>
                 <p className="text-xs text-gray-500">Your property, our treasure</p>
               </div>
             </Link>
