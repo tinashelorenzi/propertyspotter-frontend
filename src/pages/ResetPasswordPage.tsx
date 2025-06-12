@@ -1,26 +1,15 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import Toast from '../components/Toast';
 
-interface LoginResponse {
-  token: string;
-  user: {
-    id: string;
-    email: string;
-    username: string;
-    role: string;
-    first_name: string;
-    last_name: string;
-    is_active: boolean;
-  };
-}
-
-const LoginPage = () => {
+const ResetPasswordPage = () => {
+  const { token } = useParams();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    email: '',
     password: '',
+    password_confirm: '',
   });
+  const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -41,69 +30,65 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Attempting login with:', formData);
+    setIsLoading(true);
+
+    // Validate passwords match
+    if (formData.password !== formData.password_confirm) {
+      setToast({
+        message: 'Passwords do not match',
+        type: 'error',
+        isVisible: true,
+      });
+      setIsLoading(false);
+      return;
+    }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/users/login/`, {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/users/password-reset/confirm/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          token,
+          password: formData.password,
+          password_confirm: formData.password_confirm,
+        }),
       });
 
-      const data: LoginResponse = await response.json();
-      console.log('Login response:', data);
-
       if (response.ok) {
-        // Store auth token
-        localStorage.setItem('authToken', data.token);
-        
-        // Store user data
-        localStorage.setItem('userId', data.user.id);
-        localStorage.setItem('userEmail', data.user.email);
-        localStorage.setItem('username', data.user.username);
-        localStorage.setItem('userRole', data.user.role);
-        localStorage.setItem('firstName', data.user.first_name);
-        localStorage.setItem('lastName', data.user.last_name);
-        localStorage.setItem('isActive', String(data.user.is_active));
-
-        console.log('Stored user data:', {
-          token: data.token,
-          userId: data.user.id,
-          email: data.user.email,
-          username: data.user.username,
-          role: data.user.role,
-          firstName: data.user.first_name,
-          lastName: data.user.last_name,
-          isActive: data.user.is_active
-        });
-
         setToast({
-          message: 'Login successful! Redirecting...',
+          message: 'Password reset successful! Redirecting to login...',
           type: 'success',
           isVisible: true,
         });
+        
+        // Clear form
+        setFormData({
+          password: '',
+          password_confirm: '',
+        });
 
-        // Redirect to dashboard after a short delay
+        // Redirect to login after a short delay
         setTimeout(() => {
-          navigate('/dashboard');
-        }, 1500);
+          navigate('/login');
+        }, 2000);
       } else {
-        console.error('Login failed:', data);
+        const data = await response.json();
         setToast({
-          message: (data as any).message || 'Login failed. Please check your credentials.',
+          message: data.message || 'Failed to reset password. The link may be invalid or expired.',
           type: 'error',
           isVisible: true,
         });
       }
     } catch (error) {
-      console.error('Login error:', error);
       setToast({
         message: 'An error occurred. Please try again.',
         type: 'error',
         isVisible: true,
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -133,22 +118,13 @@ const LoginPage = () => {
       </Link>
 
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
-        <h1 className="text-3xl font-extrabold text-[#225AE3] mb-6 text-center">Sign In</h1>
+        <h1 className="text-3xl font-extrabold text-[#225AE3] mb-6 text-center">Reset Password</h1>
+        <p className="text-gray-600 mb-6 text-center">
+          Please enter your new password below.
+        </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
-              required
-            />
-          </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">New Password</label>
             <input
               type="password"
               id="password"
@@ -157,18 +133,30 @@ const LoginPage = () => {
               onChange={handleChange}
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
               required
+              minLength={8}
             />
-            <div className="mt-1 text-right">
-              <Link to="/forgot-password" className="text-sm text-[#225AE3] hover:underline">
-                Forgot password?
-              </Link>
-            </div>
           </div>
-          <button type="submit" className="w-full btn-primary text-lg shadow-lg">Sign In</button>
+          <div>
+            <label htmlFor="password_confirm" className="block text-sm font-medium text-gray-700">Confirm New Password</label>
+            <input
+              type="password"
+              id="password_confirm"
+              name="password_confirm"
+              value={formData.password_confirm}
+              onChange={handleChange}
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+              required
+              minLength={8}
+            />
+          </div>
+          <button 
+            type="submit" 
+            className="w-full btn-primary text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Resetting Password...' : 'Reset Password'}
+          </button>
         </form>
-        <p className="mt-4 text-center text-gray-600">
-          Don't have an account? <Link to="/register" className="text-[#225AE3] hover:underline">Sign up</Link>
-        </p>
       </div>
       {toast.isVisible && (
         <Toast
@@ -181,4 +169,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage; 
+export default ResetPasswordPage; 
