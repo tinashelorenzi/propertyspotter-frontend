@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar';
+import RecentBlogPosts from '../components/RecentBlogPosts';
 
 const features = [
   {
@@ -84,6 +85,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Blog Section */}
+      <RecentBlogPosts />
+
       {/* CTA Section */}
       <section className="relative section-padding bg-gradient-to-r from-[#225AE3] via-[#E9EEFB] to-white text-center overflow-hidden">
         <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[80vw] h-64 bg-[#225AE3]/10 rounded-full blur-3xl -z-10 animate-float-slower" />
@@ -139,7 +143,7 @@ export default function HomePage() {
               <h4 className="text-sm font-semibold text-gray-900 mb-4">Company</h4>
               <ul className="space-y-2">
                 <li><a href="/how-it-works" className="text-gray-600 hover:text-[#225AE3]">About Us</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Contact</a></li>
+                <li><a href="/contact" className="text-gray-600 hover:text-[#225AE3]">Contact</a></li>
               </ul>
             </div>
             <div>

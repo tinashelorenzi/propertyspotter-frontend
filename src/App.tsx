@@ -17,6 +17,7 @@ import BlogPostPage from './pages/BlogPostPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import DataProcessingAgreementPage from './pages/DataProcessingAgreement';
+import ContactUsPage from './pages/ContactUsPage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -59,6 +60,7 @@ const AppRoutes = () => {
       <Route path="/how-it-works" element={<HowItWorksPage />} />
       <Route path="/blog" element={<BlogPage />} />
       <Route path="/data-processing-agreement" element={<DataProcessingAgreementPage />} />
+      <Route path="/contact" element={<ContactUsPage />} />
       <Route path="/blog/:slug" element={<BlogPostPage />} />
       <Route path="/terms-of-service" element={<TermsOfServicePage />} />
       <Route path="/login" element={<Login />} />
