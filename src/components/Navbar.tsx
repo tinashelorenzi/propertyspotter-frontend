@@ -25,7 +25,6 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link to="/how-it-works" className="text-gray-600 hover:text-[#225AE3]">How It Works</Link>
             <Link to="/blog" className="text-gray-600 hover:text-[#225AE3]">Blog</Link>
             <Link to="/login" className="btn-secondary">Sign In</Link>
             <Link to="/register" className="btn-primary text-lg shadow-xl">Get Started</Link>
