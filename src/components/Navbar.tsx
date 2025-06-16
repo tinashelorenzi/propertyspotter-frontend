@@ -20,7 +20,7 @@ export default function Navbar() {
               alt="PropertySpotter Logo"
               className="h-10 w-auto"
             />
-            <p className="text-sm text-gray-500 mt-1">Your property, our pleasure</p>
+            <p className="text-sm text-gray-500 mt-1">Your property, our treasure</p>
           </Link>
 
           {/* Desktop Nav */}

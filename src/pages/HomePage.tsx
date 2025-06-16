@@ -138,8 +138,7 @@ export default function HomePage() {
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-4">Company</h4>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">About Us</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Careers</a></li>
+                <li><a href="/how-it-works" className="text-gray-600 hover:text-[#225AE3]">About Us</a></li>
                 <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Contact</a></li>
               </ul>
             </div>
@@ -147,8 +146,7 @@ export default function HomePage() {
               <h4 className="text-sm font-semibold text-gray-900 mb-4">Legal</h4>
               <ul className="space-y-2">
                 <li><Link to="/terms-of-service" className="text-gray-600 hover:text-[#225AE3]">Terms of Service</Link></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Privacy Policy</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Cookie Policy</a></li>
+                <li><Link to="/data-processing-agreement" className="text-gray-600 hover:text-[#225AE3]">Data Processing Agreement</Link></li>
               </ul>
             </div>
             <div>
@@ -162,9 +160,7 @@ export default function HomePage() {
             <div>
               <h4 className="text-sm font-semibold text-gray-900 mb-4">Connect</h4>
               <ul className="space-y-2">
-                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Twitter</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">LinkedIn</a></li>
-                <li><a href="#" className="text-gray-600 hover:text-[#225AE3]">Instagram</a></li>
+                <li><a href="https://www.facebook.com/propertyspotter.co.za" className="text-gray-600 hover:text-[#225AE3]">Facebook</a></li>
               </ul>
             </div>
           </div>
