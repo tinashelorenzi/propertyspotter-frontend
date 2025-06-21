@@ -51,6 +51,7 @@ export default function HomePage() {
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-10">
             <Link to="/register" className="btn-primary text-lg shadow-xl">Start Spotting Now</Link>
+            <Link to="/properties" className="btn-secondary text-lg flex items-center justify-center">Browse Properties</Link>
             <Link to="/how-it-works" className="btn-secondary text-lg flex items-center justify-center">How It Works</Link>
           </div>
         </div>

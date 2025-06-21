@@ -25,6 +25,7 @@ export default function Navbar() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center space-x-4">
+            <Link to="/properties" className="text-gray-600 hover:text-[#225AE3]">Properties</Link>
             <Link to="/blog" className="text-gray-600 hover:text-[#225AE3]">Blog</Link>
             <Link to="/login" className="btn-secondary">Sign In</Link>
             <Link to="/register" className="btn-primary text-lg shadow-xl">Get Started</Link>
@@ -56,6 +57,7 @@ export default function Navbar() {
       {menuOpen && (
         <div className="md:hidden bg-white/95 shadow-lg absolute top-16 left-0 w-full z-50 animate-fade-in">
           <div className="flex flex-col items-center py-4 space-y-2">
+            <Link to="/properties" className="text-gray-700 hover:text-[#225AE3] text-lg" onClick={() => setMenuOpen(false)}>Properties</Link>
             <Link to="/how-it-works" className="text-gray-700 hover:text-[#225AE3] text-lg" onClick={() => setMenuOpen(false)}>How It Works</Link>
             <Link to="/blog" className="text-gray-700 hover:text-[#225AE3] text-lg" onClick={() => setMenuOpen(false)}>Blog</Link>
             <Link to="/login" className="btn-secondary w-4/5 text-center" onClick={() => setMenuOpen(false)}>Sign In</Link>
