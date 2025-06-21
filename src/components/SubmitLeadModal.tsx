@@ -1,5 +1,17 @@
 import { useState } from 'react';
 import Toast from './Toast';
+import { 
+  XMarkIcon,
+  UserIcon,
+  EnvelopeIcon,
+  PhoneIcon,
+  MapPinIcon,
+  DocumentTextIcon,
+  PhotoIcon,
+  PlusIcon,
+  TrashIcon,
+  CheckCircleIcon
+} from '@heroicons/react/24/outline';
 
 interface ImageFile {
   file: File;
@@ -25,6 +37,7 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
   });
   const [images, setImages] = useState<ImageFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
   const [toast, setToast] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -63,74 +76,58 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const resetForm = () => {
-    setFormData({
-      first_name: '',
-      last_name: '',
-      email: '',
-      phone: '',
-      street_address: '',
-      suburb: '',
-      notes_text: '',
-      preferred_agent: '',
-    });
-    setImages([]);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const token = localStorage.getItem('authToken');
-      const formDataToSend = new FormData();
-
-      // Add basic lead information
+      const submitFormData = new FormData();
+      
+      // Add form fields
       Object.entries(formData).forEach(([key, value]) => {
-        if (value) formDataToSend.append(key, value);
+        submitFormData.append(key, value);
       });
 
-      // Add images with proper structure expected by Django
-      images.forEach((image, index) => {
-        formDataToSend.append(`image_${index}`, image.file);
-        if (image.description) {
-          formDataToSend.append(`description_${index}`, image.description);
-        }
+      // Add images
+      images.forEach((imageFile, index) => {
+        submitFormData.append(`images`, imageFile.file);
+        submitFormData.append(`image_descriptions`, imageFile.description);
       });
 
-      // Add image count for backend processing
-      formDataToSend.append('image_count', images.length.toString());
-
+      const token = localStorage.getItem('authToken');
       const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/leads/submit/`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          // Don't set Content-Type header - let browser set it for FormData
         },
-        body: formDataToSend,
+        body: submitFormData,
       });
 
-      const responseData = await response.json();
-
       if (response.ok) {
-        setToast({
-          message: 'Lead submitted successfully!',
-          type: 'success',
-          isVisible: true,
+        // Reset form
+        setFormData({
+          first_name: '',
+          last_name: '',
+          email: '',
+          phone: '',
+          street_address: '',
+          suburb: '',
+          notes_text: '',
+          preferred_agent: '',
         });
-        resetForm();
+        setImages([]);
+        setCurrentStep(1);
         onSubmitSuccess();
         onClose();
       } else {
-        console.error('Server response:', responseData);
+        const errorData = await response.json();
         setToast({
-          message: responseData.message || responseData.detail || 'Failed to submit lead. Please try again.',
+          message: errorData.message || 'Failed to submit lead. Please try again.',
           type: 'error',
           isVisible: true,
         });
       }
     } catch (error) {
-      console.error('Submit error:', error);
       setToast({
         message: 'An error occurred. Please try again.',
         type: 'error',
@@ -141,208 +138,381 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
     }
   };
 
+  const nextStep = () => {
+    if (currentStep < 3) setCurrentStep(currentStep + 1);
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+  };
+
+  const isStepValid = () => {
+    switch (currentStep) {
+      case 1:
+        return formData.first_name && formData.last_name && formData.phone;
+      case 2:
+        return formData.street_address && formData.suburb;
+      case 3:
+        return true; // Optional step
+      default:
+        return false;
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold text-gray-800">Submit New Lead</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        {/* Header */}
+        <div className="relative p-8 pb-6">
+          <div className="absolute -inset-2 bg-gradient-to-r from-[#225AE3]/10 to-[#F59E0B]/10 rounded-3xl blur opacity-50"></div>
+          <div className="relative flex justify-between items-start">
+            <div>
+              <h2 className="text-3xl font-black text-gray-900 mb-2">
+                Submit New <span className="bg-gradient-to-r from-[#225AE3] to-[#F59E0B] bg-clip-text text-transparent">Lead</span>
+              </h2>
+              <p className="text-gray-600">Help someone find their perfect property and earn money!</p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+            >
+              <XMarkIcon className="h-6 w-6 text-gray-500" />
+            </button>
+          </div>
+
+          {/* Step Indicator */}
+          <div className="mt-8">
+            <div className="flex items-center justify-center space-x-4">
+              {[1, 2, 3].map((step) => (
+                <div key={step} className="flex items-center">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
+                    step <= currentStep
+                      ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg'
+                      : 'bg-gray-200 text-gray-500'
+                  }`}>
+                    {step < currentStep ? (
+                      <CheckCircleIcon className="h-6 w-6" />
+                    ) : (
+                      step
+                    )}
+                  </div>
+                  {step < 3 && (
+                    <div className={`w-12 h-1 mx-2 rounded-full transition-colors duration-300 ${
+                      step < currentStep ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B]' : 'bg-gray-200'
+                    }`} />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-between mt-2 text-xs font-medium text-gray-500">
+              <span>Contact Info</span>
+              <span>Property Details</span>
+              <span>Additional Info</span>
+            </div>
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="first_name" className="block text-sm font-medium text-gray-700">First Name</label>
-              <input
-                type="text"
-                id="first_name"
-                name="first_name"
-                value={formData.first_name}
-                onChange={handleChange}
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
-              />
-            </div>
-            <div>
-              <label htmlFor="last_name" className="block text-sm font-medium text-gray-700">Last Name</label>
-              <input
-                type="text"
-                id="last_name"
-                name="last_name"
-                value={formData.last_name}
-                onChange={handleChange}
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email (Optional)</label>
-              <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
-              />
-            </div>
-            <div>
-              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone</label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label htmlFor="street_address" className="block text-sm font-medium text-gray-700">Street Address</label>
-              <input
-                type="text"
-                id="street_address"
-                name="street_address"
-                value={formData.street_address}
-                onChange={handleChange}
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
-              />
-            </div>
-            <div>
-              <label htmlFor="suburb" className="block text-sm font-medium text-gray-700">Suburb</label>
-              <input
-                type="text"
-                id="suburb"
-                name="suburb"
-                value={formData.suburb}
-                onChange={handleChange}
-                required
-                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="preferred_agent" className="block text-sm font-medium text-gray-700">Preferred Agent (Optional)</label>
-            <input
-              type="text"
-              id="preferred_agent"
-              name="preferred_agent"
-              value={formData.preferred_agent}
-              onChange={handleChange}
-              placeholder="e.g., Jane Smith - ABC Real Estate"
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="notes_text" className="block text-sm font-medium text-gray-700">Notes</label>
-            <textarea
-              id="notes_text"
-              name="notes_text"
-              value={formData.notes_text}
-              onChange={handleChange}
-              rows={3}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Images (Optional)</label>
-            <div className="space-y-4">
-              <div className="flex items-center justify-center w-full">
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <svg className="w-8 h-8 mb-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-                      <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
-                    </svg>
-                    <p className="mb-2 text-sm text-gray-500"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                    <p className="text-xs text-gray-500">PNG, JPG or JPEG (MAX. 10MB)</p>
-                  </div>
-                  <input
-                    type="file"
-                    className="hidden"
-                    multiple
-                    accept="image/*"
-                    onChange={handleImageAdd}
-                  />
-                </label>
+        {/* Form Content */}
+        <form onSubmit={handleSubmit} className="px-8 pb-8">
+          {/* Step 1: Contact Information */}
+          {currentStep === 1 && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <UserIcon className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Contact Information</h3>
+                <p className="text-gray-600">Who should agents contact about this property?</p>
               </div>
 
-              {images.length > 0 && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label htmlFor="first_name" className="block text-sm font-bold text-gray-700 mb-3">
+                    First Name *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <UserIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      id="first_name"
+                      name="first_name"
+                      value={formData.first_name}
+                      onChange={handleChange}
+                      required
+                      className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300 shadow-sm"
+                      placeholder="Enter first name"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="last_name" className="block text-sm font-bold text-gray-700 mb-3">
+                    Last Name *
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                      <UserIcon className="h-5 w-5 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      id="last_name"
+                      name="last_name"
+                      value={formData.last_name}
+                      onChange={handleChange}
+                      required
+                      className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300 shadow-sm"
+                      placeholder="Enter last name"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="email" className="block text-sm font-bold text-gray-700 mb-3">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300 shadow-sm"
+                    placeholder="Enter email address"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="block text-sm font-bold text-gray-700 mb-3">
+                  Phone Number *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <PhoneIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300 shadow-sm"
+                    placeholder="Enter phone number"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2: Property Details */}
+          {currentStep === 2 && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <MapPinIcon className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Property Location</h3>
+                <p className="text-gray-600">Where is this property located?</p>
+              </div>
+
+              <div>
+                <label htmlFor="street_address" className="block text-sm font-bold text-gray-700 mb-3">
+                  Street Address *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <MapPinIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    id="street_address"
+                    name="street_address"
+                    value={formData.street_address}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300 shadow-sm"
+                    placeholder="Enter street address"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="suburb" className="block text-sm font-bold text-gray-700 mb-3">
+                  Suburb *
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <MapPinIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    id="suburb"
+                    name="suburb"
+                    value={formData.suburb}
+                    onChange={handleChange}
+                    required
+                    className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300 shadow-sm"
+                    placeholder="Enter suburb"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="preferred_agent" className="block text-sm font-bold text-gray-700 mb-3">
+                  Preferred Agent (Optional)
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <UserIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    id="preferred_agent"
+                    name="preferred_agent"
+                    value={formData.preferred_agent}
+                    onChange={handleChange}
+                    className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300 shadow-sm"
+                    placeholder="Any specific agent in mind?"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Additional Information */}
+          {currentStep === 3 && (
+            <div className="space-y-6">
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <DocumentTextIcon className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Additional Details</h3>
+                <p className="text-gray-600">Add notes and photos to help agents</p>
+              </div>
+
+              <div>
+                <label htmlFor="notes_text" className="block text-sm font-bold text-gray-700 mb-3">
+                  Notes & Comments
+                </label>
+                <div className="relative">
+                  <div className="absolute top-4 left-4 pointer-events-none">
+                    <DocumentTextIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <textarea
+                    id="notes_text"
+                    name="notes_text"
+                    rows={4}
+                    value={formData.notes_text}
+                    onChange={handleChange}
+                    className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300 shadow-sm resize-none"
+                    placeholder="Any additional information about the property or client..."
+                  />
+                </div>
+              </div>
+
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-3">
+                  Property Images
+                </label>
+                <div className="space-y-4">
                   {images.map((image, index) => (
-                    <div key={index} className="relative bg-gray-50 p-4 rounded-lg">
-                      <button
-                        type="button"
-                        onClick={() => handleImageRemove(index)}
-                        className="absolute top-2 right-2 text-gray-400 hover:text-gray-500"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
-                      <img
-                        src={URL.createObjectURL(image.file)}
-                        alt={`Upload ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg mb-2"
-                      />
+                    <div key={index} className="relative p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center">
+                          <PhotoIcon className="h-5 w-5 text-[#225AE3] mr-2" />
+                          <span className="text-sm font-medium text-gray-700">
+                            {image.file.name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleImageRemove(index)}
+                          className="p-1 text-red-500 hover:bg-red-100 rounded transition-colors"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
                       <input
                         type="text"
+                        placeholder="Add a description for this image..."
                         value={image.description}
                         onChange={(e) => handleImageDescriptionChange(index, e.target.value)}
-                        placeholder="Image description"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3]"
+                        className="w-full px-3 py-2 bg-white rounded-lg border border-gray-300 focus:border-[#225AE3] focus:ring-2 focus:ring-[#225AE3]/20 transition-all duration-300"
                       />
                     </div>
                   ))}
+                  
+                  <label className="relative block w-full border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-[#225AE3] transition-colors cursor-pointer">
+                    <PhotoIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <span className="text-lg font-medium text-gray-700">Add Property Images</span>
+                    <p className="text-sm text-gray-500 mt-1">Click to upload photos of the property</p>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleImageAdd}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                  </label>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Navigation Buttons */}
+          <div className="flex justify-between items-center pt-8 mt-8 border-t border-gray-200">
+            <button
+              type="button"
+              onClick={prevStep}
+              disabled={currentStep === 1}
+              className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              Previous
+            </button>
+
+            <div className="flex space-x-3">
+              {currentStep < 3 ? (
+                <button
+                  type="button"
+                  onClick={nextStep}
+                  disabled={!isStepValid()}
+                  className="px-8 py-3 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white rounded-xl font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                >
+                  Next Step
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-8 py-3 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white rounded-xl font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                >
+                  {isSubmitting ? (
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                      Submitting...
+                    </div>
+                  ) : (
+                    'Submit Lead'
+                  )}
+                </button>
               )}
             </div>
           </div>
-
-          <div className="flex justify-end space-x-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="btn-primary flex items-center space-x-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                  <span>Submitting...</span>
-                </>
-              ) : (
-                <span>Submit Lead</span>
-              )}
-            </button>
-          </div>
         </form>
       </div>
+
+      {/* Toast Notifications */}
       {toast.isVisible && (
         <Toast
           message={toast.message}
