@@ -326,13 +326,13 @@ const LoginPage = () => {
       </section>
 
       {/* Toast Notification */}
-      {toast.isVisible && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
-        />
-      )}
+{toast.isVisible && (
+  <Toast
+    message={toast.message}
+    type={toast.type}
+    onClose={() => setToast((prev) => ({ ...prev, isVisible: false }))}
+  />
+)}
 
       {/* Custom Animations Styles */}
       <style>{`
