@@ -443,14 +443,13 @@ const RegisterPage = () => {
       </section>
 
       {/* Toast Notification */}
-      {toast.show && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          isVisible={toast.show}
-          onClose={() => setToast((prev) => ({ ...prev, show: false }))}
-        />
-      )}
+{toast.show && (
+  <Toast
+    message={toast.message}
+    type={toast.type}
+    onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+  />
+)}
 
       {/* Custom Animations Styles */}
       <style>{`
