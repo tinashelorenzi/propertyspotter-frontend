@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { 
+  EyeIcon, 
+  EyeSlashIcon, 
+  EnvelopeIcon, 
+  LockClosedIcon,
+  BuildingOfficeIcon,
+  ArrowRightIcon
+} from '@heroicons/react/24/outline';
 
 interface Agency {
   id: string;
@@ -33,6 +41,7 @@ const AgencyLoginPage = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -77,93 +86,210 @@ const AgencyLoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center items-center py-12 sm:px-6 lg:px-8 relative">
-      {/* Floating Home Button */}
-      <Link
-        to="/"
-        className="fixed top-4 left-4 z-50 bg-white rounded-full shadow-lg p-2 hover:shadow-xl transition-shadow border border-gray-200"
-        title="Back to Home"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#225AE3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      </Link>
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-          Agency/Agent Login
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Sign in to manage your account.
-        </p>
+    <div className="min-h-screen bg-gray-50 overflow-hidden relative">
+      {/* Animated Background */}
+      <div className="fixed inset-0 -z-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#E9EEFB]/60 via-white to-[#F59E0B]/20"></div>
+        <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-[#225AE3]/20 to-transparent rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute top-1/2 right-0 w-80 h-80 bg-gradient-to-bl from-[#F59E0B]/20 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute bottom-0 left-1/3 w-64 h-64 bg-gradient-to-tr from-[#225AE3]/15 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  value={formData.email}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3] sm:text-sm"
-                />
+
+      <div className="flex flex-col lg:flex-row min-h-screen">
+        {/* Left Side - Branding */}
+        <div className="lg:w-1/2 flex items-center justify-center p-8 lg:p-16">
+          <div className="max-w-md w-full">
+            <div className="text-center lg:text-left">
+              {/* Logo/Icon */}
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-3xl mb-8 shadow-2xl">
+                <BuildingOfficeIcon className="h-10 w-10 text-white" />
               </div>
-            </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-[#225AE3] focus:border-[#225AE3] sm:text-sm"
-                />
-                <div className="mt-1 text-right">
-                  <Link to="/forgot-password" className="text-sm text-[#225AE3] hover:underline">
-                    Forgot password?
-                  </Link>
+              
+              <h1 className="text-4xl lg:text-5xl font-black text-gray-900 mb-6 leading-tight">
+                Agency & Agent
+                <span className="block bg-gradient-to-r from-[#225AE3] to-[#F59E0B] bg-clip-text text-transparent">
+                  Portal
+                </span>
+              </h1>
+              
+              <p className="text-xl text-gray-600 mb-8 leading-relaxed">
+                Manage your property listings, track leads, and grow your real estate business with our powerful platform.
+              </p>
+
+              {/* Feature List */}
+              <div className="space-y-4 text-left">
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-full"></div>
+                  <span className="text-gray-700">Comprehensive lead management</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-full"></div>
+                  <span className="text-gray-700">Real-time analytics & reporting</span>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <div className="w-2 h-2 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-full"></div>
+                  <span className="text-gray-700">Agent performance tracking</span>
                 </div>
               </div>
             </div>
-            <div>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#225AE3] hover:bg-[#1a4bc4] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#225AE3] disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoading ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
-                    <span>Signing in...</span>
+          </div>
+        </div>
+
+        {/* Right Side - Login Form */}
+        <div className="lg:w-1/2 flex items-center justify-center p-8 lg:p-16">
+          <div className="max-w-md w-full">
+            {/* Login Card */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-3xl blur opacity-25"></div>
+              <div className="relative bg-white rounded-3xl p-8 lg:p-10 shadow-2xl">
+                {/* Header */}
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-black text-gray-900 mb-2">
+                    Welcome Back
+                  </h2>
+                  <p className="text-gray-600">
+                    Sign in to your agency portal
+                  </p>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                  <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-lg">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0">
+                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="ml-3">
+                        <p className="text-sm text-red-700">{error}</p>
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  'Sign in'
                 )}
-              </button>
+
+                {/* Login Form */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {/* Email Field */}
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-bold text-gray-700 mb-3">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <EnvelopeIcon className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        autoComplete="email"
+                        required
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="w-full pl-12 pr-4 py-4 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300 shadow-sm text-gray-900 placeholder-gray-500"
+                        placeholder="Enter your email address"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Password Field */}
+                  <div>
+                    <label htmlFor="password" className="block text-sm font-bold text-gray-700 mb-3">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <LockClosedIcon className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        id="password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        required
+                        value={formData.password}
+                        onChange={handleChange}
+                        className="w-full pl-12 pr-12 py-4 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300 shadow-sm text-gray-900 placeholder-gray-500"
+                        placeholder="Enter your password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        {showPassword ? (
+                          <EyeSlashIcon className="h-5 w-5" />
+                        ) : (
+                          <EyeIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Forgot Password Link */}
+                  <div className="text-right">
+                    <Link 
+                      to="/forgot-password" 
+                      className="text-sm font-semibold text-[#225AE3] hover:text-[#F59E0B] transition-colors duration-300"
+                    >
+                      Forgot your password?
+                    </Link>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group"
+                  >
+                    {isLoading ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                        <span>Signing in...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center space-x-2">
+                        <span>Sign In</span>
+                        <ArrowRightIcon className="h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+                      </div>
+                    )}
+                  </button>
+                </form>
+
+                {/* Footer Links */}
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">
+                      Looking for the spotter portal?{' '}
+                      <Link 
+                        to="/login" 
+                        className="font-semibold text-[#225AE3] hover:text-[#F59E0B] transition-colors duration-300"
+                      >
+                        Sign in here
+                      </Link>
+                    </p>
+                  </div>
+                  
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-gray-600">
+                      Need help?{' '}
+                      <Link 
+                        to="/contact" 
+                        className="font-semibold text-[#225AE3] hover:text-[#F59E0B] transition-colors duration-300"
+                      >
+                        Contact Support
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          </form>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default AgencyLoginPage; 
+export default AgencyLoginPage;
