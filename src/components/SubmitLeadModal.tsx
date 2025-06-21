@@ -162,8 +162,8 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
+      <div className="bg-white rounded-3xl max-w-2xl w-full my-8 shadow-2xl min-h-fit">
         {/* Header */}
         <div className="relative p-8 pb-6">
           <div className="absolute -inset-2 bg-gradient-to-r from-[#225AE3]/10 to-[#F59E0B]/10 rounded-3xl blur opacity-50"></div>
@@ -183,36 +183,39 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
           </div>
 
           {/* Step Indicator */}
-          <div className="mt-8">
-            <div className="flex items-center justify-center space-x-4">
-              {[1, 2, 3].map((step) => (
-                <div key={step} className="flex items-center">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
-                    step <= currentStep
-                      ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg'
-                      : 'bg-gray-200 text-gray-500'
-                  }`}>
-                    {step < currentStep ? (
-                      <CheckCircleIcon className="h-6 w-6" />
-                    ) : (
-                      step
-                    )}
-                  </div>
-                  {step < 3 && (
-                    <div className={`w-12 h-1 mx-2 rounded-full transition-colors duration-300 ${
-                      step < currentStep ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B]' : 'bg-gray-200'
-                    }`} />
+        <div className="mt-8">
+          <div className="flex items-center justify-center space-x-4">
+            {[1, 2, 3].map((step) => (
+              <div key={step} className="flex items-center">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300 ${
+                  step <= currentStep
+                    ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-500'
+                }`}>
+                  {step < currentStep ? (
+                    <CheckCircleIcon className="h-6 w-6" />
+                  ) : (
+                    step
                   )}
                 </div>
-              ))}
-            </div>
-            <div className="flex justify-between mt-2 text-xs font-medium text-gray-500">
-              <span>Contact Info</span>
-              <span>Property Details</span>
-              <span>Additional Info</span>
-            </div>
+                {step < 3 && (
+                  <div className={`w-12 h-1 mx-2 rounded-full transition-colors duration-300 ${
+                    step < currentStep ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B]' : 'bg-gray-200'
+                  }`} />
+                )}
+              </div>
+            ))}
+          </div>
+          
+          <div className="text-center mt-4">
+            <p className="text-sm text-gray-500">
+              {currentStep === 1 && "Contact Information"}
+              {currentStep === 2 && "Property Details"}
+              {currentStep === 3 && "Additional Info"}
+            </p>
           </div>
         </div>
+      </div>
 
         {/* Form Content */}
         <form onSubmit={handleSubmit} className="px-8 pb-8">
@@ -482,34 +485,34 @@ const SubmitLeadModal = ({ isOpen, onClose, onSubmitSuccess }: SubmitLeadModalPr
             </button>
 
             <div className="flex space-x-3">
-              {currentStep < 3 ? (
-                <button
-                  type="button"
-                  onClick={nextStep}
-                  disabled={!isStepValid()}
-                  className="px-8 py-3 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white rounded-xl font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
-                >
-                  Next Step
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="px-8 py-3 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white rounded-xl font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
-                >
-                  {isSubmitting ? (
-                    <div className="flex items-center">
-                      <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                      Submitting...
-                    </div>
-                  ) : (
-                    'Submit Lead'
-                  )}
-                </button>
-              )}
-            </div>
+            {currentStep < 3 ? (
+              <button
+                type="button"
+                onClick={nextStep}
+                disabled={!isStepValid()}
+                className="px-8 py-3 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white rounded-xl font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+              >
+                Next Step
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-8 py-3 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white rounded-xl font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+                    Submitting...
+                  </div>
+                ) : (
+                  'Submit Lead'
+                )}
+              </button>
+            )}
           </div>
-        </form>
+        </div>
+      </form>
       </div>
 
       {/* Toast Notifications */}
