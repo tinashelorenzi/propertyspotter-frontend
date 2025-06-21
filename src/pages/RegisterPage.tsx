@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Turnstile } from '@marsidev/react-turnstile';
 import Navbar from '../components/Navbar';
 import Toast from '../components/Toast';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
+  const turnstileRef = useRef<any>(null);
+  
   const [formData, setFormData] = useState({
     email: '',
     username: '',
@@ -17,6 +20,7 @@ const RegisterPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
@@ -32,8 +36,35 @@ const RegisterPage = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const handleTurnstileSuccess = (token: string) => {
+    setTurnstileToken(token);
+  };
+
+  const handleTurnstileError = () => {
+    setTurnstileToken('');
+    setToast({
+      show: true,
+      message: 'Security verification failed. Please try again.',
+      type: 'error',
+    });
+  };
+
+  const handleTurnstileExpire = () => {
+    setTurnstileToken('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if turnstile token is present
+    if (!turnstileToken) {
+      setToast({
+        show: true,
+        message: 'Please complete the security verification.',
+        type: 'error',
+      });
+      return;
+    }
     
     // Client-side validation
     if (formData.password !== formData.confirm_password) {
@@ -58,6 +89,7 @@ const RegisterPage = () => {
     
     const registrationData = {
       ...formData,
+      turnstileToken, // Include the turnstile token
       role: 'Spotter',
       agency: import.meta.env.VITE_SPOTTER_AGENCY,
       bank_name: 'Example Bank',
@@ -94,12 +126,25 @@ const RegisterPage = () => {
           phone: '',
         });
 
+        // Reset turnstile
+        if (turnstileRef.current) {
+          turnstileRef.current.reset();
+        }
+        setTurnstileToken('');
+
         // Redirect to login after showing success message
         setTimeout(() => {
           navigate('/login');
         }, 3000);
       } else {
         const errorData = await response.json();
+        
+        // Reset turnstile on error
+        if (turnstileRef.current) {
+          turnstileRef.current.reset();
+        }
+        setTurnstileToken('');
+        
         setToast({
           show: true,
           message: `Registration failed: ${errorData.message || 'Please try again.'}`,
@@ -108,6 +153,13 @@ const RegisterPage = () => {
       }
     } catch (error) {
       console.error('Error during registration:', error);
+      
+      // Reset turnstile on error
+      if (turnstileRef.current) {
+        turnstileRef.current.reset();
+      }
+      setTurnstileToken('');
+      
       setToast({
         show: true,
         message: 'An error occurred during registration. Please try again.',
@@ -372,10 +424,25 @@ const RegisterPage = () => {
                   </ul>
                 </div>
 
+                {/* Turnstile Component */}
+                <div className="flex justify-center">
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                    onSuccess={handleTurnstileSuccess}
+                    onError={handleTurnstileError}
+                    onExpire={handleTurnstileExpire}
+                    options={{
+                      theme: 'light',
+                      size: 'normal',
+                    }}
+                  />
+                </div>
+
                 {/* Submit Button */}
                 <button 
                   type="submit" 
-                  disabled={isLoading}
+                  disabled={isLoading || !turnstileToken}
                   className="relative w-full bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white font-bold py-4 px-6 rounded-2xl shadow-lg transform hover:-translate-y-1 hover:shadow-xl transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {isLoading ? (
@@ -430,7 +497,7 @@ const RegisterPage = () => {
                   <div className="flex flex-col items-center">
                     <div className="w-10 h-10 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-lg flex items-center justify-center mb-2">
                       <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                       </svg>
                     </div>
                     <p className="text-sm text-gray-600 font-medium">Join Community</p>
