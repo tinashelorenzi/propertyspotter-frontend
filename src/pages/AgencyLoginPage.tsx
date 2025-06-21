@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { 
   EyeIcon, 
   EyeSlashIcon, 
@@ -35,6 +36,8 @@ interface LoginResponse {
 
 const AgencyLoginPage = () => {
   const navigate = useNavigate();
+  const turnstileRef = useRef<any>(null);
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -42,6 +45,7 @@ const AgencyLoginPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -49,8 +53,28 @@ const AgencyLoginPage = () => {
     setError(null); // Clear error when user types
   };
 
+  const handleTurnstileSuccess = (token: string) => {
+    setTurnstileToken(token);
+  };
+
+  const handleTurnstileError = () => {
+    setTurnstileToken('');
+    setError('Security verification failed. Please try again.');
+  };
+
+  const handleTurnstileExpire = () => {
+    setTurnstileToken('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if turnstile token is present
+    if (!turnstileToken) {
+      setError('Please complete the security verification.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -58,7 +82,10 @@ const AgencyLoginPage = () => {
       const backendUrl = import.meta.env.VITE_BACKEND_API;
       const response = await axios.post<LoginResponse>(
         `${backendUrl}api/users/login/`,
-        formData
+        {
+          ...formData,
+          turnstileToken // Include the turnstile token
+        }
       );
       const { token, user } = response.data;
 
@@ -79,6 +106,13 @@ const AgencyLoginPage = () => {
       }
     } catch (err) {
       console.error('Login error:', err);
+      
+      // Reset turnstile on error
+      if (turnstileRef.current) {
+        turnstileRef.current.reset();
+      }
+      setTurnstileToken('');
+      
       setError('Invalid email or password. Please try again.');
     } finally {
       setIsLoading(false);
@@ -237,10 +271,25 @@ const AgencyLoginPage = () => {
                     </Link>
                   </div>
 
+                  {/* Turnstile Component */}
+                  <div className="flex justify-center">
+                    <Turnstile
+                      ref={turnstileRef}
+                      siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                      onSuccess={handleTurnstileSuccess}
+                      onError={handleTurnstileError}
+                      onExpire={handleTurnstileExpire}
+                      options={{
+                        theme: 'light',
+                        size: 'normal',
+                      }}
+                    />
+                  </div>
+
                   {/* Submit Button */}
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || !turnstileToken}
                     className="w-full bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group"
                   >
                     {isLoading ? (

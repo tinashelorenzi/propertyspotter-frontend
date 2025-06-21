@@ -1,17 +1,21 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { Turnstile } from '@marsidev/react-turnstile';
 import Toast from './Toast';
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const turnstileRef = useRef<any>(null);
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
   const [toast, setToast] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -30,8 +34,36 @@ const Login = () => {
     }));
   };
 
+  const handleTurnstileSuccess = (token: string) => {
+    setTurnstileToken(token);
+  };
+
+  const handleTurnstileError = () => {
+    setTurnstileToken('');
+    setToast({
+      message: 'Security verification failed. Please try again.',
+      type: 'error',
+      isVisible: true,
+    });
+  };
+
+  const handleTurnstileExpire = () => {
+    setTurnstileToken('');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if turnstile token is present
+    if (!turnstileToken) {
+      setToast({
+        message: 'Please complete the security verification.',
+        type: 'error',
+        isVisible: true,
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -40,7 +72,10 @@ const Login = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          turnstileToken // Include the turnstile token
+        }),
       });
 
       const data = await response.json();
@@ -59,6 +94,12 @@ const Login = () => {
           navigate('/dashboard');
         }
       } else {
+        // Reset turnstile on error
+        if (turnstileRef.current) {
+          turnstileRef.current.reset();
+        }
+        setTurnstileToken('');
+        
         setToast({
           message: data.message || 'Login failed. Please check your credentials.',
           type: 'error',
@@ -66,6 +107,12 @@ const Login = () => {
         });
       }
     } catch (error) {
+      // Reset turnstile on error
+      if (turnstileRef.current) {
+        turnstileRef.current.reset();
+      }
+      setTurnstileToken('');
+      
       setToast({
         message: 'An error occurred. Please try again.',
         type: 'error',
@@ -221,10 +268,25 @@ const Login = () => {
                   </Link>
                 </div>
 
+                {/* Turnstile Component */}
+                <div className="flex justify-center">
+                  <Turnstile
+                    ref={turnstileRef}
+                    siteKey={import.meta.env.VITE_TURNSTILE_SITE_KEY}
+                    onSuccess={handleTurnstileSuccess}
+                    onError={handleTurnstileError}
+                    onExpire={handleTurnstileExpire}
+                    options={{
+                      theme: 'light',
+                      size: 'normal',
+                    }}
+                  />
+                </div>
+
                 {/* Submit Button */}
                 <button 
                   type="submit" 
-                  disabled={isLoading}
+                  disabled={isLoading || !turnstileToken}
                   className="relative w-full bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white font-bold py-4 px-6 rounded-2xl shadow-lg transform hover:-translate-y-1 hover:shadow-xl transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   {isLoading ? (
