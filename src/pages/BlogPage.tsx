@@ -434,7 +434,7 @@ export default function BlogPage() {
                   className="h-12 w-auto"
                 />
                 <div>
-                  <h3 className="text-2xl font-bold bg-gradient-to-r from-[#225AE3] to-[#F59E0B] bg-clip-text text-transparent">PropertySpotter</h3>
+                  <h3 className="property-spotter-heading text-2xl font-bold bg-gradient-to-r from-[#225AE3] to-[#F59E0B] bg-clip-text text-transparent">PropertySpotter</h3>
                   <p className="text-gray-400">Your property, our treasure</p>
                 </div>
               </div>

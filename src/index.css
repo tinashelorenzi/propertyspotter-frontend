@@ -396,6 +396,12 @@
   }
 }
 
+@media (max-width: 768px) {
+  .property-spotter-heading {
+    display: none;
+  }
+}
+
 /* Focus styles for accessibility */
 .focus-ring {
   @apply focus:outline-none focus:ring-2 focus:ring-[#225AE3] focus:ring-offset-2;
