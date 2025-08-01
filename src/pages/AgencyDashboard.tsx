@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
+import Toast from '../components/Toast';
 import {
   BuildingOfficeIcon,
   UserGroupIcon,
@@ -155,6 +156,15 @@ const AgencyDashboard = () => {
   const [deactivateError, setDeactivateError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isReactivating, setIsReactivating] = useState<string | null>(null);
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({
+    show: false,
+    message: '',
+    type: 'success'
+  });
 
   // Keep all existing useEffect hooks exactly as they are
   useEffect(() => {
@@ -355,6 +365,11 @@ const AgencyDashboard = () => {
         first_name: '',
         last_name: '',
         phone: ''
+      });
+      setToast({
+        show: true,
+        message: 'Agent invitation sent successfully!',
+        type: 'success'
       });
     } catch (err) {
       console.error('Error inviting agent:', err);
@@ -1352,6 +1367,15 @@ const AgencyDashboard = () => {
         <div className="fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
           {deactivateError}
         </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(prev => ({ ...prev, show: false }))}
+        />
       )}
     </div>
   );
