@@ -27,3 +27,5 @@ propertyspotter/settings.py
 .env
 .env
 .env
+
+dist/

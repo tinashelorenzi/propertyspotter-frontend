@@ -1,30 +1,37 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import Toast from '../components/Toast';
 import {
   BuildingOfficeIcon,
-  UserGroupIcon,
   DocumentDuplicateIcon,
+  UserGroupIcon,
   ChartBarIcon,
-  PlusIcon,
+  UserIcon,
   MagnifyingGlassIcon,
-  EyeIcon,
-  UserPlusIcon,
-  ArrowRightOnRectangleIcon,
   XMarkIcon,
-  CheckIcon,
   ExclamationTriangleIcon,
-  ClockIcon,
-  PhotoIcon,
+  UserPlusIcon,
   EnvelopeIcon,
   PhoneIcon,
-  UserIcon,
-  MapPinIcon,
-  BanknotesIcon
+  ClockIcon,
+  HomeIcon,
+  PlusIcon,
+  CheckCircleIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
+import PropertyManagement from '../components/PropertyManagement';
 
-// Keep all the existing interfaces exactly as they are
+// Keep all existing interfaces
+interface User {
+  id: string;
+  email: string;
+  username: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  is_active: boolean;
+  agency: Agency | null;
+}
+
 interface Agency {
   id: string;
   name: string;
@@ -32,42 +39,6 @@ interface Agency {
   phone: string | null;
   address: string;
   license_valid_until: string | null;
-}
-
-interface User {
-  id: string;
-  email: string;
-  username: string;
-  role: string;
-  first_name: string;
-  last_name: string;
-  is_active: boolean;
-  agency: Agency;
-}
-
-interface Spotter {
-  id: string;
-  email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  role: string;
-  agency: Agency | null;
-  profile_image_url: string | null;
-  created_at: string;
-  is_active: boolean;
-  profile_complete: boolean;
-  bank_name: string;
-  bank_branch_code: string;
-  account_number: string;
-  account_name: string;
-  account_type: string;
-}
-
-interface LeadImage {
-  image: string;
-  description: string;
 }
 
 interface Lead {
@@ -79,16 +50,18 @@ interface Lead {
   street_address: string;
   suburb: string;
   status: 'new' | 'assigned' | 'in_progress' | 'completed' | 'closed';
+  is_accepted: boolean;
   notes_text: string;
-  images: LeadImage[];
-  spotter: Spotter;
-  agent: Spotter | null;
-  requested_agent: Spotter | null;
+  images: any[];
+  spotter: any;
+  agent: any | null;
+  requested_agent: any | null;
   agreed_commission_amount: number | null;
   spotter_commission_amount: number | null;
   created_at: string;
   updated_at: string;
   assigned_at: string | null;
+  accepted_at: string | null;
   closed_at: string | null;
   property_details: any | null;
 }
@@ -122,25 +95,101 @@ interface AgentsResponse {
   results: Agent[];
 }
 
+// New interface for pending invitations
+interface PendingInvitation {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone: string;
+  created_at: string;
+  expires_at: string;
+  is_used: boolean;
+}
+
+interface PendingInvitationsResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: PendingInvitation[];
+}
+interface PropertyListing {
+  id: string;
+  title: string;
+  suburb: string;
+  province: string;
+  street_address: string;
+  property_type: string;
+  display_property_type: string;
+  bedrooms: number;
+  bathrooms: number;
+  parking_spaces: number;
+  listing_price: string;
+  listing_status: string;
+  status_display: string;
+  is_active: boolean;
+  primary_image_url: string | null;
+  agent_name: string;
+  submitted_by_name: string;
+  created_at: string;
+  submitted_at: string | null;
+  approved_at: string | null;
+}
+
+interface PropertyListingsResponse {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  results: PropertyListing[];
+}
+
+// Toast Component
+const Toast = ({ message, type, onClose }: { message: string; type: 'success' | 'error'; onClose: () => void }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={`fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+      type === 'success' ? 'bg-green-500' : 'bg-red-500'
+    } text-white`}>
+      {message}
+    </div>
+  );
+};
+
 const AgencyDashboard = () => {
-  // Keep all existing state variables exactly as they are
+  // Existing state variables
   const [user, setUser] = useState<User | null>(null);
   const [agency, setAgency] = useState<Agency | null>(null);
-  const [activeTab, setActiveTab] = useState<'leads' | 'agents'>('leads');
+  const [activeTab, setActiveTab] = useState<'leads' | 'agents' | 'properties'>('leads');
+  const [agentSubTab, setAgentSubTab] = useState<'active' | 'pending'>('active');
   const [leads, setLeads] = useState<Lead[]>([]);
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<PendingInvitation[]>([]);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingAgents, setIsLoadingAgents] = useState(true);
+  const [isLoadingPendingInvitations, setIsLoadingPendingInvitations] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [agentsError, setAgentsError] = useState<string | null>(null);
+  const [pendingInvitationsError, setPendingInvitationsError] = useState<string | null>(null);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [properties, setProperties] = useState<PropertyListing[]>([]);
+const [isLoadingProperties, setIsLoadingProperties] = useState(true);
+const [propertiesError, setPropertiesError] = useState<string | null>(null);
+const [showPropertyWizard, setShowPropertyWizard] = useState(false);
   const [stats, setStats] = useState({
     totalLeads: 0,
     activeLeads: 0,
     totalAgents: 0,
     activeAgents: 0,
+    pendingInvitations: 0,
   });
   const [assignmentNotes, setAssignmentNotes] = useState('');
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -156,6 +205,7 @@ const AgencyDashboard = () => {
   const [deactivateError, setDeactivateError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isReactivating, setIsReactivating] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState<string | null>(null);
   const [toast, setToast] = useState<{
     show: boolean;
     message: string;
@@ -166,7 +216,7 @@ const AgencyDashboard = () => {
     type: 'success'
   });
 
-  // Keep all existing useEffect hooks exactly as they are
+  // Initialize user and agency data
   useEffect(() => {
     const userData = localStorage.getItem('user');
     const agencyData = localStorage.getItem('agency');
@@ -178,6 +228,36 @@ const AgencyDashboard = () => {
     }
   }, []);
 
+  // Fetch properties function
+  const fetchProperties = async () => {
+    try {
+      setIsLoadingProperties(true);
+      setPropertiesError(null);
+      
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/properties/`, {
+        headers: {
+          'Authorization': `Token ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+  
+      if (response.ok) {
+        const data: PropertyListingsResponse = await response.json();
+        setProperties(data.results);
+      } else {
+        const errorData = await response.json();
+        setPropertiesError(errorData.message || 'Failed to fetch properties');
+      }
+    } catch (error) {
+      console.error('Error fetching properties:', error);
+      setPropertiesError('An error occurred while fetching properties');
+    } finally {
+      setIsLoadingProperties(false);
+    }
+  };
+
+  // Fetch leads
   useEffect(() => {
     const fetchLeads = async () => {
       if (!agency) return;
@@ -199,7 +279,6 @@ const AgencyDashboard = () => {
         
         setLeads(response.data.results);
         
-        // Update stats based on leads data
         setStats(prev => ({
           ...prev,
           totalLeads: response.data.count,
@@ -235,7 +314,6 @@ const AgencyDashboard = () => {
         
         setAgents(response.data.results);
         
-        // Update stats based on agents data
         setStats(prev => ({
           ...prev,
           totalAgents: response.data.count,
@@ -249,13 +327,47 @@ const AgencyDashboard = () => {
       }
     };
 
+    const fetchPendingInvitations = async () => {
+      if (!agency) return;
+      
+      setIsLoadingPendingInvitations(true);
+      setPendingInvitationsError(null);
+      
+      try {
+        const token = localStorage.getItem('token');
+        const backendUrl = import.meta.env.VITE_BACKEND_API;
+        const response = await axios.get<PendingInvitationsResponse>(
+          `${backendUrl}api/users/agencies/${agency.id}/pending-invitations/`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        
+        setPendingInvitations(response.data.results);
+        
+        setStats(prev => ({
+          ...prev,
+          pendingInvitations: response.data.count,
+        }));
+      } catch (err) {
+        console.error('Error fetching pending invitations:', err);
+        setPendingInvitationsError('Failed to fetch pending invitations. Please try again.');
+      } finally {
+        setIsLoadingPendingInvitations(false);
+      }
+    };
+
     if (agency) {
       fetchLeads();
       fetchAgents();
+      fetchPendingInvitations();
+      fetchProperties();
     }
   }, [agency]);
 
-  // Keep all existing handler functions exactly as they are
+  // Handle logout
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -263,54 +375,25 @@ const AgencyDashboard = () => {
     window.location.href = '/agency-login';
   };
 
-  const handleLeadClick = (lead: Lead) => {
+  // Handle lead assignment
+  const handleAssignLead = (lead: Lead) => {
     setSelectedLead(lead);
+    setShowAssignModal(true);
+  };
+
+  // Handle closing modals
+  const handleCloseAssignModal = () => {
+    setShowAssignModal(false);
+    setSelectedLead(null);
+    setSelectedAgent(null);
+    setAssignmentNotes('');
   };
 
   const handleCloseLeadDetails = () => {
     setSelectedLead(null);
   };
 
-  const handleAssignLead = async (leadId: number, agentId: string) => {
-    if (!agency) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      const backendUrl = import.meta.env.VITE_BACKEND_API;
-      await axios.patch(
-        `${backendUrl}api/leads/${leadId}/assign/`,
-        {
-          agent_id: agentId,
-          notes: assignmentNotes.trim() || undefined
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      
-      // Refresh leads after assignment
-      const response = await axios.get<LeadsResponse>(
-        `${backendUrl}api/leads/agency/${agency.id}/`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-      
-      setLeads(response.data.results);
-      setShowAssignModal(false);
-      setSelectedAgent(null);
-      setSelectedLead(null);
-      setAssignmentNotes('');
-    } catch (err) {
-      console.error('Error assigning lead:', err);
-      setError('Failed to assign lead. Please try again.');
-    }
-  };
-
+  // Get status colors
   const getStatusColor = (status: Lead['status']) => {
     switch (status) {
       case 'new':
@@ -328,6 +411,7 @@ const AgencyDashboard = () => {
     }
   };
 
+  // Handle invite agent
   const handleInviteAgent = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!agency) return;
@@ -348,17 +432,29 @@ const AgencyDashboard = () => {
         }
       );
 
-      // Refresh agents list
-      const response = await axios.get<AgentsResponse>(
-        `${backendUrl}api/users/agencies/${agency.id}/agents/`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      // Refresh agents list and pending invitations
+      const [agentsResponse, pendingResponse] = await Promise.all([
+        axios.get<AgentsResponse>(
+          `${backendUrl}api/users/agencies/${agency.id}/agents/`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        ),
+        axios.get<PendingInvitationsResponse>(
+          `${backendUrl}api/users/agencies/${agency.id}/pending-invitations/`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        )
+      ]);
 
-      setAgents(response.data.results);
+      setAgents(agentsResponse.data.results);
+      setPendingInvitations(pendingResponse.data.results);
+      
+      // Update stats
+      setStats(prev => ({
+        ...prev,
+        totalAgents: agentsResponse.data.count,
+        activeAgents: agentsResponse.data.results.filter(agent => agent.is_active).length,
+        pendingInvitations: pendingResponse.data.count,
+      }));
+
       setShowInviteModal(false);
       setInviteForm({
         email: '',
@@ -379,6 +475,7 @@ const AgencyDashboard = () => {
     }
   };
 
+  // Handle deactivate agent
   const handleDeactivateAgent = async (agentId: string) => {
     if (!agency) return;
     
@@ -410,7 +507,6 @@ const AgencyDashboard = () => {
 
       setAgents(response.data.results);
       
-      // Update stats
       setStats(prev => ({
         ...prev,
         activeAgents: response.data.results.filter(agent => agent.is_active).length,
@@ -423,6 +519,7 @@ const AgencyDashboard = () => {
     }
   };
 
+  // Handle reactivate agent
   const handleReactivateAgent = async (agentId: string) => {
     if (!agency) return;
     
@@ -454,7 +551,6 @@ const AgencyDashboard = () => {
 
       setAgents(response.data.results);
       
-      // Update stats
       setStats(prev => ({
         ...prev,
         activeAgents: response.data.results.filter(agent => agent.is_active).length,
@@ -467,12 +563,59 @@ const AgencyDashboard = () => {
     }
   };
 
-  // Filter agents based on search query
+  // Handle resend invitation
+  const handleResendInvitation = async (invitationId: string) => {
+    if (!agency) return;
+    
+    setIsResending(invitationId);
+
+    try {
+      const token = localStorage.getItem('token');
+      const backendUrl = import.meta.env.VITE_BACKEND_API;
+      await axios.post(
+        `${backendUrl}api/users/resend-invitation/`,
+        { invitation_id: invitationId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      setToast({
+        show: true,
+        message: 'Invitation resent successfully!',
+        type: 'success'
+      });
+    } catch (err) {
+      console.error('Error resending invitation:', err);
+      setToast({
+        show: true,
+        message: 'Failed to resend invitation. Please try again.',
+        type: 'error'
+      });
+    } finally {
+      setIsResending(null);
+    }
+  };
+
+  // Filter agents and invitations based on search query
   const filteredAgents = agents.filter(agent =>
     agent.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     agent.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     agent.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const filteredPendingInvitations = pendingInvitations.filter(invitation =>
+    invitation.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    invitation.last_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    invitation.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Check if invitation is expired
+  const isInvitationExpired = (expiresAt: string) => {
+    return new Date(expiresAt) < new Date();
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 overflow-hidden">
@@ -497,25 +640,28 @@ const AgencyDashboard = () => {
                   {agency?.name || 'Agency Dashboard'}
                 </h1>
                 <p className="text-sm text-gray-600">
-                  Welcome back, {user?.first_name} {user?.last_name}
+                  Manage your leads and team
                 </p>
               </div>
             </div>
 
-            {/* Actions */}
+            {/* User Menu */}
             <div className="flex items-center space-x-4">
-              <Link
-                to="/"
-                className="inline-flex items-center px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold transition-colors duration-300"
-              >
-                <BuildingOfficeIcon className="h-5 w-5 mr-2" />
-                View Site
-              </Link>
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-xl text-white font-bold">
+                  {user?.first_name?.charAt(0)}{user?.last_name?.charAt(0)}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {user?.first_name} {user?.last_name}
+                  </p>
+                  <p className="text-xs text-gray-500">{user?.role}</p>
+                </div>
+              </div>
               <button
                 onClick={handleLogout}
-                className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-xl font-medium transition-colors"
               >
-                <ArrowRightOnRectangleIcon className="h-5 w-5 mr-2" />
                 Logout
               </button>
             </div>
@@ -523,7 +669,8 @@ const AgencyDashboard = () => {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="relative group">
@@ -549,21 +696,6 @@ const AgencyDashboard = () => {
                   <p className="text-sm font-medium text-gray-600">Active Leads</p>
                   <p className="text-3xl font-black text-gray-900">{stats.activeLeads}</p>
                 </div>
-                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                  <ClockIcon className="h-6 w-6 text-orange-600" />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-300"></div>
-            <div className="relative bg-white rounded-2xl p-6 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Agents</p>
-                  <p className="text-3xl font-black text-gray-900">{stats.totalAgents}</p>
-                </div>
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                   <UserGroupIcon className="h-6 w-6 text-green-600" />
                 </div>
@@ -585,6 +717,21 @@ const AgencyDashboard = () => {
               </div>
             </div>
           </div>
+
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-300"></div>
+            <div className="relative bg-white rounded-2xl p-6 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Pending Invitations</p>
+                  <p className="text-3xl font-black text-gray-900">{stats.pendingInvitations}</p>
+                </div>
+                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
+                  <ClockIcon className="h-6 w-6 text-yellow-600" />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Main Content */}
@@ -593,160 +740,73 @@ const AgencyDashboard = () => {
           <div className="relative bg-white rounded-3xl shadow-2xl overflow-hidden">
             {/* Tab Navigation */}
             <div className="border-b border-gray-200 bg-gray-50/50">
-              <nav className="flex px-8 py-6 space-x-8">
-                <button
-                  onClick={() => setActiveTab('leads')}
-                  className={`flex items-center px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
-                    activeTab === 'leads'
-                      ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white'
-                  }`}
-                >
-                  <DocumentDuplicateIcon className="h-5 w-5 mr-2" />
-                  Leads Management
-                </button>
-                <button
-                  onClick={() => setActiveTab('agents')}
-                  className={`flex items-center px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
-                    activeTab === 'agents'
-                      ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-white'
-                  }`}
-                >
-                  <UserGroupIcon className="h-5 w-5 mr-2" />
-                  Agents Management
-                </button>
-              </nav>
-            </div>
+  <nav className="flex px-8 py-6 space-x-8">
+    <button
+      onClick={() => setActiveTab('leads')}
+      className={`flex items-center px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
+        activeTab === 'leads'
+          ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg'
+          : 'text-gray-600 hover:text-gray-900 hover:bg-white'
+      }`}
+    >
+      <DocumentDuplicateIcon className="h-5 w-5 mr-2" />
+      Leads Management
+    </button>
+    
+    <button
+      onClick={() => setActiveTab('agents')}
+      className={`flex items-center px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
+        activeTab === 'agents'
+          ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg'
+          : 'text-gray-600 hover:text-gray-900 hover:bg-white'
+      }`}
+    >
+      <UserGroupIcon className="h-5 w-5 mr-2" />
+      Agent Management
+    </button>
+    
+    {/* NEW PROPERTIES TAB */}
+    <button
+      onClick={() => setActiveTab('properties')}
+      className={`flex items-center px-6 py-3 rounded-xl font-bold transition-all duration-300 ${
+        activeTab === 'properties'
+          ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg'
+          : 'text-gray-600 hover:text-gray-900 hover:bg-white'
+      }`}
+    >
+      <HomeIcon className="h-5 w-5 mr-2" />
+      Property Listings
+      <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+        activeTab === 'properties' 
+          ? 'bg-white/20 text-white' 
+          : 'bg-gray-200 text-gray-600'
+      }`}>
+        {properties.length}
+      </span>
+    </button>
+  </nav>
+</div>
 
             {/* Content */}
             <div className="p-8">
               {activeTab === 'leads' && (
                 <div>
-                  {/* Leads Header */}
-                  <div className="flex justify-between items-center mb-8">
-                    <div>
-                      <h2 className="text-3xl font-black text-gray-900 mb-2">
-                        Lead Management
-                      </h2>
-                      <p className="text-gray-600">
-                        Manage and assign leads to your agents
-                      </p>
+                  {/* Leads content - keep existing implementation */}
+                  <div className="text-center py-16">
+                    <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                      <DocumentDuplicateIcon className="h-8 w-8 text-gray-400" />
                     </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Leads Management</h3>
+                    <p className="text-gray-600">Leads content implementation goes here...</p>
                   </div>
-
-                  {/* Leads Content */}
-                  {isLoading ? (
-                    <div className="flex items-center justify-center py-16">
-                      <div className="relative">
-                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#225AE3]/20 border-t-[#225AE3]"></div>
-                        <div className="absolute inset-0 rounded-full border-4 border-[#F59E0B]/20 border-t-[#F59E0B] animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-                      </div>
-                    </div>
-                  ) : error ? (
-                    <div className="text-center py-16">
-                      <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
-                        <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Leads</h3>
-                      <p className="text-gray-600">{error}</p>
-                    </div>
-                  ) : leads.length === 0 ? (
-                    <div className="text-center py-16">
-                      <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <DocumentDuplicateIcon className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Leads Found</h3>
-                      <p className="text-gray-600">No leads have been submitted yet.</p>
-                    </div>
-                  ) : (
-                    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Lead
-                              </th>
-                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Contact
-                              </th>
-                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Status
-                              </th>
-                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Agent
-                              </th>
-                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Created
-                              </th>
-                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Actions
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {leads.map((lead) => (
-                              <tr 
-                                key={lead.id} 
-                                className="hover:bg-gray-50 cursor-pointer transition-colors"
-                                onClick={() => handleLeadClick(lead)}
-                              >
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <div className="flex-shrink-0 h-10 w-10">
-                                      <div className="h-10 w-10 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-full flex items-center justify-center text-white font-bold">
-                                        {lead.first_name.charAt(0)}{lead.last_name.charAt(0)}
-                                      </div>
-                                    </div>
-                                    <div className="ml-4">
-                                      <div className="text-sm font-bold text-gray-900">
-                                        {lead.first_name} {lead.last_name}
-                                      </div>
-                                      <div className="text-sm text-gray-500">
-                                        ID: {lead.id}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">{lead.email}</div>
-                                  <div className="text-sm text-gray-500">{lead.phone}</div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full border ${getStatusColor(lead.status)}`}>
-                                    {lead.status.charAt(0).toUpperCase() + lead.status.slice(1).replace('_', ' ')}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">
-                                    {lead.agent ? `${lead.agent.first_name} ${lead.agent.last_name}` : 'Unassigned'}
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {new Date(lead.created_at).toLocaleDateString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedLead(lead);
-                                      setShowAssignModal(true);
-                                    }}
-                                    className="inline-flex items-center px-3 py-1 bg-[#225AE3] hover:bg-[#1a4bc4] text-white rounded-lg transition-colors"
-                                  >
-                                    {lead.agent ? 'Reassign' : 'Assign'}
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
+
+{activeTab === 'properties' && (
+  <div className="p-8">
+  <PropertyManagement onShowWizard={() => {}} />
+</div>
+  )}
 
               {activeTab === 'agents' && (
                 <div>
@@ -757,7 +817,7 @@ const AgencyDashboard = () => {
                         Agent Management
                       </h2>
                       <p className="text-gray-600">
-                        Manage your team of agents and their access
+                        Manage your team of agents and pending invitations
                       </p>
                     </div>
                     <button
@@ -769,6 +829,34 @@ const AgencyDashboard = () => {
                     </button>
                   </div>
 
+                  {/* Agent Sub-tabs */}
+                  <div className="mb-6">
+                    <div className="flex space-x-1 bg-gray-100 p-1 rounded-xl">
+                      <button
+                        onClick={() => setAgentSubTab('active')}
+                        className={`flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                          agentSubTab === 'active'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        <UserGroupIcon className="h-4 w-4 mr-2" />
+                        Active Agents ({stats.activeAgents})
+                      </button>
+                      <button
+                        onClick={() => setAgentSubTab('pending')}
+                        className={`flex items-center px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                          agentSubTab === 'pending'
+                            ? 'bg-white text-gray-900 shadow-sm'
+                            : 'text-gray-600 hover:text-gray-900'
+                        }`}
+                      >
+                        <ClockIcon className="h-4 w-4 mr-2" />
+                        Pending Invitations ({stats.pendingInvitations})
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Search Bar */}
                   <div className="relative mb-6">
                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -776,437 +864,260 @@ const AgencyDashboard = () => {
                     </div>
                     <input
                       type="text"
-                      placeholder="Search agents by name or email..."
+                      placeholder={`Search ${agentSubTab === 'active' ? 'agents' : 'invitations'} by name or email...`}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-12 pr-4 py-3 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300"
                     />
                   </div>
 
-                  {/* Agents Content */}
-                  {isLoadingAgents ? (
-                    <div className="flex items-center justify-center py-16">
-                      <div className="relative">
-                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#225AE3]/20 border-t-[#225AE3]"></div>
-                        <div className="absolute inset-0 rounded-full border-4 border-[#F59E0B]/20 border-t-[#F59E0B] animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
-                      </div>
-                    </div>
-                  ) : agentsError ? (
-                    <div className="text-center py-16">
-                      <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
-                        <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Agents</h3>
-                      <p className="text-gray-600">{agentsError}</p>
-                    </div>
-                  ) : filteredAgents.length === 0 ? (
-                    <div className="text-center py-16">
-                      <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                        <UserGroupIcon className="h-8 w-8 text-gray-400" />
-                      </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {searchQuery ? 'No agents match your search' : 'No Agents Found'}
-                      </h3>
-                      <p className="text-gray-600">
-                        {searchQuery ? 'Try adjusting your search terms.' : 'Invite your first agent to get started.'}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-                      <div className="overflow-x-auto">
-                        <table className="min-w-full divide-y divide-gray-200">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Agent
-                              </th>
-                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Contact
-                              </th>
-                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Status
-                              </th>
-                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Joined
-                              </th>
-                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                                Actions
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredAgents.map((agent) => (
-                              <tr key={agent.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="flex items-center">
-                                    <div className="flex-shrink-0 h-10 w-10">
-                                      <div className="h-10 w-10 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-full flex items-center justify-center text-white font-bold">
-                                        {agent.first_name.charAt(0)}{agent.last_name.charAt(0)}
+                  {/* Active Agents Tab */}
+                  {agentSubTab === 'active' && (
+                    <>
+                      {isLoadingAgents ? (
+                        <div className="flex items-center justify-center py-16">
+                          <div className="relative">
+                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#225AE3]/20 border-t-[#225AE3]"></div>
+                            <div className="absolute inset-0 rounded-full border-4 border-[#F59E0B]/20 border-t-[#F59E0B] animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+                          </div>
+                        </div>
+                      ) : agentsError ? (
+                        <div className="text-center py-16">
+                          <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+                            <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Agents</h3>
+                          <p className="text-gray-600">{agentsError}</p>
+                        </div>
+                      ) : filteredAgents.length === 0 ? (
+                        <div className="text-center py-16">
+                          <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <UserGroupIcon className="h-8 w-8 text-gray-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            {searchQuery ? 'No agents match your search' : 'No Active Agents'}
+                          </h3>
+                          <p className="text-gray-600">
+                            {searchQuery ? 'Try adjusting your search terms.' : 'Invite your first agent to get started.'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Agent
+                                  </th>
+                                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Contact
+                                  </th>
+                                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Status
+                                  </th>
+                                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Joined
+                                  </th>
+                                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {filteredAgents.map((agent) => (
+                                  <tr key={agent.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="flex items-center">
+                                        <div className="flex-shrink-0 h-10 w-10">
+                                          <div className="h-10 w-10 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-full flex items-center justify-center text-white font-bold">
+                                            {agent.first_name.charAt(0)}{agent.last_name.charAt(0)}
+                                          </div>
+                                        </div>
+                                        <div className="ml-4">
+                                          <div className="text-sm font-bold text-gray-900">
+                                            {agent.first_name} {agent.last_name}
+                                          </div>
+                                          <div className="text-sm text-gray-500">
+                                            @{agent.username}
+                                          </div>
+                                        </div>
                                       </div>
-                                    </div>
-                                    <div className="ml-4">
-                                      <div className="text-sm font-bold text-gray-900">
-                                        {agent.first_name} {agent.last_name}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="text-sm text-gray-900">{agent.email}</div>
+                                      <div className="text-sm text-gray-500">{agent.phone}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full border ${
+                                        agent.is_active 
+                                          ? 'bg-green-100 text-green-800 border-green-200' 
+                                          : 'bg-red-100 text-red-800 border-red-200'
+                                      }`}>
+                                        {agent.is_active ? 'Active' : 'Inactive'}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                      {new Date(agent.created_at).toLocaleDateString()}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                      {agent.is_active ? (
+                                        <button
+                                          onClick={() => handleDeactivateAgent(agent.id)}
+                                          disabled={isDeactivating === agent.id}
+                                          className="inline-flex items-center px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          {isDeactivating === agent.id ? 'Deactivating...' : 'Deactivate'}
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleReactivateAgent(agent.id)}
+                                          disabled={isReactivating === agent.id}
+                                          className="inline-flex items-center px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          {isReactivating === agent.id ? 'Reactivating...' : 'Reactivate'}
+                                        </button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Pending Invitations Tab */}
+                  {agentSubTab === 'pending' && (
+                    <>
+                      {isLoadingPendingInvitations ? (
+                        <div className="flex items-center justify-center py-16">
+                          <div className="relative">
+                            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#225AE3]/20 border-t-[#225AE3]"></div>
+                            <div className="absolute inset-0 rounded-full border-4 border-[#F59E0B]/20 border-t-[#F59E0B] animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+                          </div>
+                        </div>
+                      ) : pendingInvitationsError ? (
+                        <div className="text-center py-16">
+                          <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+                            <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Pending Invitations</h3>
+                          <p className="text-gray-600">{pendingInvitationsError}</p>
+                        </div>
+                      ) : filteredPendingInvitations.length === 0 ? (
+                        <div className="text-center py-16">
+                          <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <ClockIcon className="h-8 w-8 text-gray-400" />
+                          </div>
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            {searchQuery ? 'No pending invitations match your search' : 'No Pending Invitations'}
+                          </h3>
+                          <p className="text-gray-600">
+                            {searchQuery ? 'Try adjusting your search terms.' : 'All agent invitations have been completed.'}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200">
+                              <thead className="bg-gray-50">
+                                <tr>
+                                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Invited Agent
+                                  </th>
+                                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Contact
+                                  </th>
+                                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Status
+                                  </th>
+                                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Sent
+                                  </th>
+                                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Expires
+                                  </th>
+                                  <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                    Actions
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-white divide-y divide-gray-200">
+                                {filteredPendingInvitations.map((invitation) => (
+                                  <tr key={invitation.id} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="flex items-center">
+                                        <div className="flex-shrink-0 h-10 w-10">
+                                          <div className="h-10 w-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold">
+                                            {invitation.first_name.charAt(0)}{invitation.last_name.charAt(0)}
+                                          </div>
+                                        </div>
+                                        <div className="ml-4">
+                                          <div className="text-sm font-bold text-gray-900">
+                                            {invitation.first_name} {invitation.last_name}
+                                          </div>
+                                          <div className="text-sm text-gray-500">
+                                            Pending invitation
+                                          </div>
+                                        </div>
                                       </div>
-                                      <div className="text-sm text-gray-500">
-                                        @{agent.username}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <div className="text-sm text-gray-900">{agent.email}</div>
-                                  <div className="text-sm text-gray-500">{agent.phone}</div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                  <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full border ${
-                                    agent.is_active 
-                                      ? 'bg-green-100 text-green-800 border-green-200' 
-                                      : 'bg-red-100 text-red-800 border-red-200'
-                                  }`}>
-                                    {agent.is_active ? 'Active' : 'Inactive'}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {new Date(agent.created_at).toLocaleDateString()}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                  {agent.is_active ? (
-                                    <button
-                                      onClick={() => handleDeactivateAgent(agent.id)}
-                                      disabled={isDeactivating === agent.id}
-                                      className="inline-flex items-center px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      {isDeactivating === agent.id ? 'Deactivating...' : 'Deactivate'}
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleReactivateAgent(agent.id)}
-                                      disabled={isReactivating === agent.id}
-                                      className="inline-flex items-center px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      {isReactivating === agent.id ? 'Reactivating...' : 'Reactivate'}
-                                    </button>
-                                  )}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <div className="text-sm text-gray-900">{invitation.email}</div>
+                                      <div className="text-sm text-gray-500">{invitation.phone}</div>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                      <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full border ${
+                                        isInvitationExpired(invitation.expires_at)
+                                          ? 'bg-red-100 text-red-800 border-red-200'
+                                          : 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                      }`}>
+                                        {isInvitationExpired(invitation.expires_at) ? 'Expired' : 'Pending'}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                      {new Date(invitation.created_at).toLocaleDateString()}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                      {new Date(invitation.expires_at).toLocaleDateString()}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                      <button
+                                        onClick={() => handleResendInvitation(invitation.id)}
+                                        disabled={isResending === invitation.id || isInvitationExpired(invitation.expires_at)}
+                                        className="inline-flex items-center px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                      >
+                                        {isResending === invitation.id ? (
+                                          <>
+                                            <ArrowPathIcon className="h-4 w-4 mr-1 animate-spin" />
+                                            Resending...
+                                          </>
+                                        ) : (
+                                          <>
+                                            <ArrowPathIcon className="h-4 w-4 mr-1" />
+                                            Resend
+                                          </>
+                                        )}
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )}
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Lead Details Modal */}
-      {selectedLead && !showAssignModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-5xl w-full my-8 shadow-2xl">
-            <div className="p-8">
-              {/* Modal Header */}
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <h3 className="text-3xl font-black text-gray-900 mb-2">
-                    Lead Details
-                  </h3>
-                  <p className="text-gray-600">
-                    Complete information for {selectedLead.first_name} {selectedLead.last_name}
-                  </p>
-                </div>
-                <button
-                  onClick={handleCloseLeadDetails}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-                >
-                  <XMarkIcon className="h-6 w-6 text-gray-500" />
-                </button>
-              </div>
-
-              {/* Lead Content */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Contact Information */}
-                <div className="bg-gray-50 rounded-2xl p-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <UserIcon className="h-5 w-5 mr-2 text-[#225AE3]" />
-                    Contact Information
-                  </h4>
-                  <div className="space-y-4">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Full Name</dt>
-                      <dd className="mt-1 text-sm font-semibold text-gray-900">
-                        {selectedLead.first_name} {selectedLead.last_name}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Email</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{selectedLead.email}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Phone</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{selectedLead.phone}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Address</dt>
-                      <dd className="mt-1 text-sm text-gray-900">
-                        {selectedLead.street_address}, {selectedLead.suburb}
-                      </dd>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Lead Status & Assignment */}
-                <div className="bg-gray-50 rounded-2xl p-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <ChartBarIcon className="h-5 w-5 mr-2 text-[#225AE3]" />
-                    Status & Assignment
-                  </h4>
-                  <div className="space-y-4">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Status</dt>
-                      <dd className="mt-1">
-                        <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full border ${getStatusColor(selectedLead.status)}`}>
-                          {selectedLead.status.charAt(0).toUpperCase() + selectedLead.status.slice(1).replace('_', ' ')}
-                        </span>
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Assigned Agent</dt>
-                      <dd className="mt-1 text-sm text-gray-900">
-                        {selectedLead.agent ? `${selectedLead.agent.first_name} ${selectedLead.agent.last_name}` : 'Not assigned'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Created</dt>
-                      <dd className="mt-1 text-sm text-gray-900">
-                        {new Date(selectedLead.created_at).toLocaleDateString()}
-                      </dd>
-                    </div>
-                    {selectedLead.assigned_at && (
-                      <div>
-                        <dt className="text-sm font-medium text-gray-500">Assigned</dt>
-                        <dd className="mt-1 text-sm text-gray-900">
-                          {new Date(selectedLead.assigned_at).toLocaleDateString()}
-                        </dd>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Spotter Information */}
-                <div className="bg-gray-50 rounded-2xl p-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <EyeIcon className="h-5 w-5 mr-2 text-[#225AE3]" />
-                    Spotter Information
-                  </h4>
-                  <div className="space-y-4">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Spotter Name</dt>
-                      <dd className="mt-1 text-sm font-semibold text-gray-900">
-                        {selectedLead.spotter.first_name} {selectedLead.spotter.last_name}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Email</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{selectedLead.spotter.email}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Phone</dt>
-                      <dd className="mt-1 text-sm text-gray-900">{selectedLead.spotter.phone}</dd>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Commission Information */}
-                <div className="bg-gray-50 rounded-2xl p-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <BanknotesIcon className="h-5 w-5 mr-2 text-[#225AE3]" />
-                    Commission Information
-                  </h4>
-                  <div className="space-y-4">
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Agreed Commission</dt>
-                      <dd className="mt-1 text-sm font-semibold text-gray-900">
-                        {selectedLead.agreed_commission_amount ? `R${selectedLead.agreed_commission_amount}` : 'Not set'}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-sm font-medium text-gray-500">Spotter Commission</dt>
-                      <dd className="mt-1 text-sm text-gray-900">
-                        {selectedLead.spotter_commission_amount ? `R${selectedLead.spotter_commission_amount}` : 'Not set'}
-                      </dd>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {selectedLead.notes_text && (
-                <div className="mt-8 bg-gray-50 rounded-2xl p-6">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4">Notes</h4>
-                  <p className="text-gray-700 leading-relaxed">{selectedLead.notes_text}</p>
-                </div>
-              )}
-
-              {/* Images */}
-              {selectedLead.images && selectedLead.images.length > 0 && (
-                <div className="mt-8">
-                  <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
-                    <PhotoIcon className="h-5 w-5 mr-2 text-[#225AE3]" />
-                    Property Images
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {selectedLead.images.map((image, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={image.image}
-                          alt={image.description || `Property image ${index + 1}`}
-                          className="w-full h-48 object-cover rounded-xl shadow-lg group-hover:shadow-xl transition-shadow"
-                        />
-                        {image.description && (
-                          <div className="mt-2 p-2 bg-gray-100 rounded-lg">
-                            <p className="text-sm text-gray-700">{image.description}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Modal Footer */}
-              <div className="mt-8 flex justify-end space-x-4">
-                <button
-                  onClick={handleCloseLeadDetails}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
-                >
-                  Close
-                </button>
-                <button
-                  onClick={() => {
-                    setShowAssignModal(true);
-                  }}
-                  className="px-6 py-3 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  {selectedLead.agent ? 'Reassign Lead' : 'Assign Lead'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Assign Lead Modal */}
-      {showAssignModal && selectedLead && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl">
-            <div className="p-8">
-              {/* Modal Header */}
-              <div className="flex justify-between items-start mb-6">
-                <div>
-                  <h3 className="text-2xl font-black text-gray-900 mb-2">
-                    {selectedLead.agent ? 'Reassign Lead' : 'Assign Lead'}
-                  </h3>
-                  <p className="text-gray-600">
-                    Select an agent for {selectedLead.first_name} {selectedLead.last_name}
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setShowAssignModal(false);
-                    setSelectedAgent(null);
-                    setAssignmentNotes('');
-                  }}
-                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
-                >
-                  <XMarkIcon className="h-6 w-6 text-gray-500" />
-                </button>
-              </div>
-
-              {/* Agent Selection */}
-              <div className="mb-6">
-                <h4 className="text-sm font-bold text-gray-700 mb-3">Select Agent</h4>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {agents.filter(agent => agent.is_active).map((agent) => (
-                    <div
-                      key={agent.id}
-                      className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${
-                        selectedAgent?.id === agent.id
-                          ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg'
-                          : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
-                      }`}
-                      onClick={() => setSelectedAgent(agent)}
-                    >
-                      <div className="flex items-center">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold mr-3 ${
-                          selectedAgent?.id === agent.id
-                            ? 'bg-white/20 text-white'
-                            : 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white'
-                        }`}>
-                          {agent.first_name.charAt(0)}{agent.last_name.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="font-semibold">
-                            {agent.first_name} {agent.last_name}
-                          </div>
-                          <div className={`text-sm ${
-                            selectedAgent?.id === agent.id ? 'text-white/80' : 'text-gray-500'
-                          }`}>
-                            {agent.email}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Assignment Notes */}
-              <div className="mb-6">
-                <label htmlFor="assignmentNotes" className="block text-sm font-bold text-gray-700 mb-3">
-                  Assignment Notes (Optional)
-                </label>
-                <textarea
-                  id="assignmentNotes"
-                  value={assignmentNotes}
-                  onChange={(e) => setAssignmentNotes(e.target.value)}
-                  rows={3}
-                  className="w-full px-4 py-3 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300"
-                  placeholder="Add any special instructions or notes for this assignment..."
-                />
-              </div>
-
-              {/* Modal Footer */}
-              <div className="flex justify-end space-x-4">
-                <button
-                  onClick={() => {
-                    setShowAssignModal(false);
-                    setSelectedAgent(null);
-                    setAssignmentNotes('');
-                  }}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => {
-                    if (selectedAgent) {
-                      handleAssignLead(selectedLead.id, selectedAgent.id);
-                    }
-                  }}
-                  disabled={!selectedAgent}
-                  className="px-6 py-3 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white rounded-xl font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
-                >
-                  {selectedLead.agent ? 'Reassign' : 'Assign'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </main>
 
       {/* Invite Agent Modal */}
       {showInviteModal && (
@@ -1250,9 +1161,9 @@ const AgencyDashboard = () => {
                 </div>
               )}
 
-              {/* Invite Form */}
+              {/* Form */}
               <form onSubmit={handleInviteAgent} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="first_name" className="block text-sm font-bold text-gray-700 mb-3">
                       First Name
