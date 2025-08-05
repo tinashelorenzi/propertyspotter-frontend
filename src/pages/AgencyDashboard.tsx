@@ -376,9 +376,54 @@ const [showPropertyWizard, setShowPropertyWizard] = useState(false);
   };
 
   // Handle lead assignment
-  const handleAssignLead = (lead: Lead) => {
-    setSelectedLead(lead);
-    setShowAssignModal(true);
+  const handleAssignLead = async (leadId: number, agentId: string) => {
+    if (!agency) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const backendUrl = import.meta.env.VITE_BACKEND_API;
+      await axios.patch(
+        `${backendUrl}api/leads/${leadId}/assign/`,
+        {
+          agent_id: agentId,
+          notes: assignmentNotes.trim() || undefined
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      // Refresh leads after assignment
+      const response = await axios.get<LeadsResponse>(
+        `${backendUrl}api/leads/agency/${agency.id}/`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      setLeads(response.data.results);
+      setShowAssignModal(false);
+      setSelectedAgent(null);
+      setSelectedLead(null);
+      setAssignmentNotes('');
+      
+      setToast({
+        show: true,
+        message: 'Lead assigned successfully!',
+        type: 'success'
+      });
+    } catch (err) {
+      console.error('Error assigning lead:', err);
+      setToast({
+        show: true,
+        message: 'Failed to assign lead. Please try again.',
+        type: 'error'
+      });
+    }
   };
 
   // Handle closing modals
@@ -791,22 +836,130 @@ const [showPropertyWizard, setShowPropertyWizard] = useState(false);
             <div className="p-8">
               {activeTab === 'leads' && (
                 <div>
-                  {/* Leads content - keep existing implementation */}
-                  <div className="text-center py-16">
-                    <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                      <DocumentDuplicateIcon className="h-8 w-8 text-gray-400" />
+                  {/* Leads Header */}
+                  <div className="flex justify-between items-center mb-8">
+                    <div>
+                      <h2 className="text-3xl font-black text-gray-900 mb-2">
+                        Lead Management
+                      </h2>
+                      <p className="text-gray-600">
+                        Manage and assign leads to your agents
+                      </p>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Leads Management</h3>
-                    <p className="text-gray-600">Leads content implementation goes here...</p>
                   </div>
+
+                  {/* Leads Content */}
+                  {isLoading ? (
+                    <div className="flex items-center justify-center py-16">
+                      <div className="relative">
+                        <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#225AE3]/20 border-t-[#225AE3]"></div>
+                        <div className="absolute inset-0 rounded-full border-4 border-[#F59E0B]/20 border-t-[#F59E0B] animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1.5s' }}></div>
+                      </div>
+                    </div>
+                  ) : error ? (
+                    <div className="text-center py-16">
+                      <div className="w-16 h-16 mx-auto bg-red-100 rounded-full flex items-center justify-center mb-4">
+                        <ExclamationTriangleIcon className="h-8 w-8 text-red-600" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Leads</h3>
+                      <p className="text-gray-600">{error}</p>
+                    </div>
+                  ) : leads.length === 0 ? (
+                    <div className="text-center py-16">
+                      <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                        <DocumentDuplicateIcon className="h-8 w-8 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Leads Found</h3>
+                      <p className="text-gray-600">No leads have been submitted yet.</p>
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                Lead
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                Contact
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                Status
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                Agent
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                Created
+                              </th>
+                              <th className="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {leads.map((lead) => (
+                              <tr 
+                                key={lead.id} 
+                                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                                onClick={() => setSelectedLead(lead)}
+                              >
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="flex items-center">
+                                    <div className="flex-shrink-0 h-10 w-10">
+                                      <div className="h-10 w-10 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-full flex items-center justify-center text-white font-bold">
+                                        {lead.first_name.charAt(0)}{lead.last_name.charAt(0)}
+                                      </div>
+                                    </div>
+                                    <div className="ml-4">
+                                      <div className="text-sm font-bold text-gray-900">
+                                        {lead.first_name} {lead.last_name}
+                                      </div>
+                                      <div className="text-sm text-gray-500">
+                                        ID: {lead.id}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900">{lead.email}</div>
+                                  <div className="text-sm text-gray-500">{lead.phone}</div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full border ${getStatusColor(lead.status)}`}>
+                                    {lead.status.charAt(0).toUpperCase() + lead.status.slice(1).replace('_', ' ')}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap">
+                                  <div className="text-sm text-gray-900">
+                                    {lead.agent ? `${lead.agent.first_name} ${lead.agent.last_name}` : 'Unassigned'}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {new Date(lead.created_at).toLocaleDateString()}
+                                </td>
+                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedLead(lead);
+                                      setShowAssignModal(true);
+                                    }}
+                                    className="inline-flex items-center px-3 py-1 bg-[#225AE3] hover:bg-[#1a4bc4] text-white rounded-lg transition-colors"
+                                  >
+                                    {lead.agent ? 'Reassign' : 'Assign'}
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-
-{activeTab === 'properties' && (
-  <div className="p-8">
-  <PropertyManagement onShowWizard={() => {}} />
-</div>
-  )}
 
               {activeTab === 'agents' && (
                 <div>
@@ -1114,10 +1267,123 @@ const [showPropertyWizard, setShowPropertyWizard] = useState(false);
                   )}
                 </div>
               )}
+
+              {activeTab === 'properties' && (
+                <PropertyManagement onShowWizard={() => setShowPropertyWizard(true)} />
+              )}
             </div>
           </div>
         </div>
       </main>
+
+      {/* Assign Lead Modal */}
+      {showAssignModal && selectedLead && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full shadow-2xl">
+            <div className="p-8">
+              {/* Modal Header */}
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-2xl font-black text-gray-900 mb-2">
+                    {selectedLead.agent ? 'Reassign Lead' : 'Assign Lead'}
+                  </h3>
+                  <p className="text-gray-600">
+                    Select an agent for {selectedLead.first_name} {selectedLead.last_name}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAssignModal(false);
+                    setSelectedAgent(null);
+                    setAssignmentNotes('');
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                >
+                  <XMarkIcon className="h-6 w-6 text-gray-500" />
+                </button>
+              </div>
+
+              {/* Agent Selection */}
+              <div className="mb-6">
+                <h4 className="text-sm font-bold text-gray-700 mb-3">Select Agent</h4>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {agents.filter(agent => agent.is_active).map((agent) => (
+                    <div
+                      key={agent.id}
+                      className={`p-4 rounded-xl cursor-pointer transition-all duration-200 ${
+                        selectedAgent?.id === agent.id
+                          ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg'
+                          : 'bg-gray-50 hover:bg-gray-100 text-gray-900'
+                      }`}
+                      onClick={() => setSelectedAgent(agent)}
+                    >
+                      <div className="flex items-center">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold mr-3 ${
+                          selectedAgent?.id === agent.id
+                            ? 'bg-white/20 text-white'
+                            : 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white'
+                        }`}>
+                          {agent.first_name.charAt(0)}{agent.last_name.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="font-semibold">
+                            {agent.first_name} {agent.last_name}
+                          </div>
+                          <div className={`text-sm ${
+                            selectedAgent?.id === agent.id ? 'text-white/80' : 'text-gray-500'
+                          }`}>
+                            {agent.email}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Assignment Notes */}
+              <div className="mb-6">
+                <label htmlFor="assignmentNotes" className="block text-sm font-bold text-gray-700 mb-3">
+                  Assignment Notes (Optional)
+                </label>
+                <textarea
+                  id="assignmentNotes"
+                  value={assignmentNotes}
+                  onChange={(e) => setAssignmentNotes(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-white rounded-xl border-2 border-gray-200 focus:border-[#225AE3] focus:ring-4 focus:ring-[#225AE3]/20 transition-all duration-300"
+                  placeholder="Add any special instructions or notes for this assignment..."
+                />
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => {
+                    setShowAssignModal(false);
+                    setSelectedAgent(null);
+                    setAssignmentNotes('');
+                  }}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (selectedAgent) {
+                      handleAssignLead(selectedLead.id, selectedAgent.id);
+                    }
+                  }}
+                  disabled={!selectedAgent}
+                  className="px-6 py-3 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white rounded-xl font-bold shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                >
+                  {selectedLead.agent ? 'Reassign' : 'Assign'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Invite Agent Modal */}
       {showInviteModal && (
