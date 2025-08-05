@@ -56,7 +56,7 @@ class PropertyService {
   private getAuthHeaders() {
     const token = localStorage.getItem('token');
     return {
-      'Authorization': `Token ${token}`,
+      'Authorization': `Bearer ${token}`,
       'Content-Type': 'application/json',
     };
   }
@@ -64,7 +64,7 @@ class PropertyService {
   private getAuthHeadersForUpload() {
     const token = localStorage.getItem('token');
     return {
-      'Authorization': `Token ${token}`,
+      'Authorization': `Bearer ${token}`,
     };
   }
 

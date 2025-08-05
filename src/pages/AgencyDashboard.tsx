@@ -234,10 +234,10 @@ const [showPropertyWizard, setShowPropertyWizard] = useState(false);
       setIsLoadingProperties(true);
       setPropertiesError(null);
       
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/properties/`, {
         headers: {
-          'Authorization': `Token ${token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });

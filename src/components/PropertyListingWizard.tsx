@@ -143,11 +143,11 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
 
   const createDraft = async () => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/drafts/create/`, {
         method: 'POST',
         headers: {
-          'Authorization': `Token ${token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -178,10 +178,10 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
   const fetchAgents = async () => {
     try {
       setIsLoadingAgents(true);
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/agents/`, {
         headers: {
-          'Authorization': `Token ${token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
@@ -264,13 +264,13 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
       formData.append('alt_text', file.name);
       formData.append('is_primary', uploadedImages.length === 0 ? 'true' : 'false');
 
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/drafts/${draft.id}/images/upload/`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Token ${token}`,
+            'Authorization': `Bearer ${token}`,
           },
           body: formData,
         }
@@ -316,13 +316,13 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
 
   const deleteImage = async (imageId: string) => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/drafts/images/delete/`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Token ${token}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ image_id: imageId }),
@@ -357,13 +357,13 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
     if (!draft) return;
 
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/drafts/${draft.id}/images/${imageId}/set-primary/`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Token ${token}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         }
@@ -444,14 +444,14 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('token');
       
       const response = await fetch(
         `${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/properties/create/`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Token ${token}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
