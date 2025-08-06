@@ -261,16 +261,44 @@ class PropertyService {
   // ============ UTILITY ============
 
   async getAgents(): Promise<Agent[]> {
-    const response = await fetch(`${API_BASE}api/listings/agency-admin/agents/`, {
-      headers: this.getAuthHeaders(),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch agents');
+    try {
+      console.log('🔍 Fetching agents using localStorage agency...');
+      
+      const token = localStorage.getItem('token');
+      const agencyData = localStorage.getItem('agency');
+      
+      if (!agencyData) {
+        throw new Error('No agency data found in localStorage');
+      }
+      
+      const agency = JSON.parse(agencyData);
+      console.log('🏢 Agency from localStorage:', agency);
+      
+      if (!agency.id) {
+        throw new Error('Agency ID not found');
+      }
+  
+      const backendUrl = import.meta.env.VITE_BACKEND_API;
+      
+      // Use the same approach as AgencyDashboard
+      const response = await fetch(`${backendUrl}api/users/agencies/${agency.id}/agents/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (!response.ok) {
+        throw new Error(`Failed to fetch agents: ${response.status} ${response.statusText}`);
+      }
+  
+      const data = await response.json();
+      console.log('✅ Agents response:', data);
+      
+      return data.results || [];
+    } catch (error) {
+      console.error('❌ Error fetching agents:', error);
+      throw error;
     }
-
-    const data: ApiResponse<Agent> = await response.json();
-    return data.results || [];
   }
 }
 

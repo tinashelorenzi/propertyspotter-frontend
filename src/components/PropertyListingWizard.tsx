@@ -11,17 +11,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { StarIcon } from '@heroicons/react/24/solid';
 import Toast from './Toast';
-
-interface Agent {
-  id: string;
-  email: string;
-  username: string;
-  first_name: string;
-  last_name: string;
-  phone: string;
-  role: string;
-  is_active: boolean;
-}
+import { propertyService } from '../services/propertyService';
+import type { PropertyDraft, Agent } from '../services/propertyService';
 
 interface UploadedImage {
   image_id: string;
@@ -30,15 +21,6 @@ interface UploadedImage {
   size: number;
   is_primary: boolean;
   order: number;
-}
-
-interface PropertyDraft {
-  id: string;
-  session_id: string;
-  created_by: string;
-  created_at: string;
-  images: UploadedImage[];
-  image_count: number;
 }
 
 interface PropertyFormData {
@@ -76,7 +58,8 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [isLoadingAgents, setIsLoadingAgents] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [dragActive, setDragActive] = useState(false);
+
   const [formData, setFormData] = useState<PropertyFormData>({
     title: '',
     description: '',
@@ -104,14 +87,12 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
     isVisible: false,
   });
 
-  const [dragActive, setDragActive] = useState(false);
-
-  // Province options
+  // Options for dropdowns
   const provinceOptions = [
     { value: 'gauteng', label: 'Gauteng' },
     { value: 'western_cape', label: 'Western Cape' },
-    { value: 'eastern_cape', label: 'Eastern Cape' },
     { value: 'kwazulu_natal', label: 'KwaZulu-Natal' },
+    { value: 'eastern_cape', label: 'Eastern Cape' },
     { value: 'free_state', label: 'Free State' },
     { value: 'mpumalanga', label: 'Mpumalanga' },
     { value: 'limpopo', label: 'Limpopo' },
@@ -119,7 +100,6 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
     { value: 'northern_cape', label: 'Northern Cape' },
   ];
 
-  // Property type options
   const propertyTypeOptions = [
     { value: 'house', label: 'House' },
     { value: 'apartment', label: 'Apartment' },
@@ -127,15 +107,59 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
     { value: 'duplex', label: 'Duplex' },
     { value: 'penthouse', label: 'Penthouse' },
     { value: 'studio', label: 'Studio' },
-    { value: 'cottage', label: 'Cottage' },
-    { value: 'farm', label: 'Farm' },
-    { value: 'commercial', label: 'Commercial' },
     { value: 'other', label: 'Other' },
   ];
 
-  // Create draft when wizard opens
+  // Helper function to get current user email
+  const getCurrentUserEmail = () => {
+    try {
+      // First try to get from localStorage user data (like AgencyDashboard)
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const user = JSON.parse(userData);
+        console.log('👤 User from localStorage:', user);
+        return user.email || '';
+      }
+      
+      // Fallback to token parsing (but with better error handling)
+      const token = localStorage.getItem('token');
+      if (!token) return '';
+  
+      let actualToken = token;
+      if (token.startsWith('Bearer ')) {
+        actualToken = token.substring(7);
+      }
+  
+      const tokenParts = actualToken.split('.');
+      if (tokenParts.length !== 3) return '';
+  
+      const payload = tokenParts[1];
+      const paddedPayload = payload + '='.repeat((4 - payload.length % 4) % 4);
+      
+      const decodedPayload = JSON.parse(atob(paddedPayload));
+      return decodedPayload.email || decodedPayload.username || '';
+    } catch (e) {
+      console.warn('Could not get user email:', e);
+      return '';
+    }
+  };
+
+  // Auto-select current user as agent when agents are loaded
   useEffect(() => {
-    if (isOpen && !draft) {
+    if (agents.length > 0 && !formData.agent) {
+      const currentUser = agents.find(agent => agent.email === getCurrentUserEmail());
+      if (currentUser) {
+        setFormData(prev => ({
+          ...prev,
+          agent: currentUser.id
+        }));
+      }
+    }
+  }, [agents]);
+
+  // Initialize wizard when opened
+  useEffect(() => {
+    if (isOpen) {
       createDraft();
       fetchAgents();
     }
@@ -143,32 +167,12 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
 
   const createDraft = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/drafts/create/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          session_id: `wizard_${Date.now()}`
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setDraft(data.data);
-      } else {
-        setToast({
-          message: 'Failed to create draft. Please try again.',
-          type: 'error',
-          isVisible: true,
-        });
-      }
+      const newDraft = await propertyService.createDraft();
+      setDraft(newDraft);
     } catch (error) {
       console.error('Error creating draft:', error);
       setToast({
-        message: 'An error occurred while creating draft.',
+        message: 'Failed to create draft. Please try again.',
         type: 'error',
         isVisible: true,
       });
@@ -178,79 +182,47 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
   const fetchAgents = async () => {
     try {
       setIsLoadingAgents(true);
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/agents/`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setAgents(data.results);
-      }
+      const agentsData = await propertyService.getAgents();
+      setAgents(agentsData);
     } catch (error) {
       console.error('Error fetching agents:', error);
+      setToast({
+        message: 'Failed to load agents. Please try again.',
+        type: 'error',
+        isVisible: true,
+      });
     } finally {
       setIsLoadingAgents(false);
     }
   };
 
-  const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    handleFiles(files);
-  }, [draft]);
-
-  const handleDrag = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFiles(Array.from(e.dataTransfer.files));
     }
-  }, []);
+  };
 
   const handleFiles = async (files: File[]) => {
     if (!draft) return;
 
     for (const file of files) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        setToast({
-          message: `${file.name} is not an image file`,
-          type: 'error',
-          isVisible: true,
-        });
-        continue;
+      if (file.type.startsWith('image/')) {
+        await uploadImage(file);
       }
-
-      // Validate file size (10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        setToast({
-          message: `${file.name} is too large (max 10MB)`,
-          type: 'error',
-          isVisible: true,
-        });
-        continue;
-      }
-
-      // Check image limit (200)
-      if (uploadedImages.length >= 200) {
-        setToast({
-          message: 'Maximum of 200 images allowed per property',
-          type: 'error',
-          isVisible: true,
-        });
-        break;
-      }
-
-      await uploadImage(file);
     }
   };
 
@@ -259,53 +231,34 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
 
     try {
       setIsUploading(true);
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('alt_text', file.name);
-      formData.append('is_primary', uploadedImages.length === 0 ? 'true' : 'false');
-
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/drafts/${draft.id}/images/upload/`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-          body: formData,
-        }
-      );
-
-      if (response.ok) {
-        const data = await response.json();
-        const newImage: UploadedImage = {
-          image_id: data.data.image_id,
-          image_url: data.data.image_url,
-          filename: data.data.filename,
-          size: data.data.size,
-          is_primary: data.data.is_primary,
-          order: data.data.order
-        };
-        
-        setUploadedImages(prev => [...prev, newImage]);
-        
+      
+      // Check image limit
+      if (uploadedImages.length >= 200) {
         setToast({
-          message: `${file.name} uploaded successfully`,
-          type: 'success',
-          isVisible: true,
-        });
-      } else {
-        const errorData = await response.json();
-        setToast({
-          message: errorData.message || `Failed to upload ${file.name}`,
+          message: 'Maximum of 200 images allowed per property',
           type: 'error',
           isVisible: true,
         });
+        return;
       }
+
+      const isPrimary = uploadedImages.length === 0;
+      const imageData = await propertyService.uploadImageToDraft(draft.id, file, isPrimary);
+      
+      const newImage: UploadedImage = {
+        image_id: imageData.image_id,
+        image_url: imageData.image_url,
+        filename: imageData.filename,
+        size: imageData.size,
+        is_primary: imageData.is_primary,
+        order: imageData.order,
+      };
+
+      setUploadedImages(prev => [...prev, newImage]);
     } catch (error) {
       console.error('Error uploading image:', error);
       setToast({
-        message: `Error uploading ${file.name}`,
+        message: 'Failed to upload image. Please try again.',
         type: 'error',
         isVisible: true,
       });
@@ -316,37 +269,12 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
 
   const deleteImage = async (imageId: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/drafts/images/delete/`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ image_id: imageId }),
-        }
-      );
-
-      if (response.ok) {
-        setUploadedImages(prev => prev.filter(img => img.image_id !== imageId));
-        setToast({
-          message: 'Image deleted successfully',
-          type: 'success',
-          isVisible: true,
-        });
-      } else {
-        setToast({
-          message: 'Failed to delete image',
-          type: 'error',
-          isVisible: true,
-        });
-      }
+      await propertyService.deleteImage(imageId);
+      setUploadedImages(prev => prev.filter(img => img.image_id !== imageId));
     } catch (error) {
       console.error('Error deleting image:', error);
       setToast({
-        message: 'Error deleting image',
+        message: 'Failed to delete image. Please try again.',
         type: 'error',
         isVisible: true,
       });
@@ -357,41 +285,17 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
     if (!draft) return;
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/drafts/${draft.id}/images/${imageId}/set-primary/`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
+      await propertyService.setPrimaryImage(draft.id, imageId);
+      setUploadedImages(prev => 
+        prev.map(img => ({
+          ...img,
+          is_primary: img.image_id === imageId
+        }))
       );
-
-      if (response.ok) {
-        setUploadedImages(prev => 
-          prev.map(img => ({
-            ...img,
-            is_primary: img.image_id === imageId
-          }))
-        );
-        setToast({
-          message: 'Primary image updated successfully',
-          type: 'success',
-          isVisible: true,
-        });
-      } else {
-        setToast({
-          message: 'Failed to set primary image',
-          type: 'error',
-          isVisible: true,
-        });
-      }
     } catch (error) {
       console.error('Error setting primary image:', error);
       setToast({
-        message: 'Error setting primary image',
+        message: 'Failed to set primary image. Please try again.',
         type: 'error',
         isVisible: true,
       });
@@ -400,22 +304,22 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     
-    if (type === 'checkbox') {
-      const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({ ...prev, [name]: checked }));
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    handleFiles(files);
+    if (e.target.files) {
+      handleFiles(Array.from(e.target.files));
+    }
   };
 
   const nextStep = () => {
-    if (currentStep < 3) {
+    if (currentStep < 3 && validateStep()) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -431,62 +335,39 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
       case 1:
         return uploadedImages.length > 0;
       case 2:
-        return formData.title && formData.description && formData.suburb && formData.street_address;
+        return !!(formData.title && formData.description && formData.suburb && formData.street_address);
       case 3:
-        return formData.agent && formData.listing_price;
+        return !!(formData.listing_price);
       default:
         return true;
     }
   };
 
-  const createPropertyListing = async () => {
+  const handleSubmit = async () => {
     if (!draft || !validateStep()) return;
 
     try {
       setIsSubmitting(true);
-      const token = localStorage.getItem('token');
       
-      const response = await fetch(
-        `${import.meta.env.VITE_BACKEND_API}api/listings/agency-admin/properties/create/`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...formData,
-            draft_id: draft.id,
-            listing_price: parseFloat(formData.listing_price).toString()
-          }),
-        }
-      );
+      const propertyData = {
+        ...formData,
+        listing_price: parseFloat(formData.listing_price.replace(/\s/g, '')).toString()
+      };
 
-      if (response.ok) {
-        const data = await response.json();
-        setToast({
-          message: 'Property listing created successfully!',
-          type: 'success',
-          isVisible: true,
-        });
-        
-        // Reset form and close wizard
-        setTimeout(() => {
-          onPropertyCreated();
-          handleClose();
-        }, 1500);
-      } else {
-        const errorData = await response.json();
-        setToast({
-          message: errorData.message || 'Failed to create property listing',
-          type: 'error',
-          isVisible: true,
-        });
-      }
+      await propertyService.createProperty(propertyData, draft.id);
+      
+      setToast({
+        message: 'Property listing created successfully!',
+        type: 'success',
+        isVisible: true,
+      });
+
+      onPropertyCreated();
+      handleClose();
     } catch (error) {
       console.error('Error creating property:', error);
       setToast({
-        message: 'An error occurred while creating the property',
+        message: 'Failed to create property listing. Please try again.',
         type: 'error',
         isVisible: true,
       });
@@ -496,7 +377,6 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
   };
 
   const handleClose = () => {
-    // Reset all state
     setCurrentStep(1);
     setDraft(null);
     setUploadedImages([]);
@@ -516,6 +396,11 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
       has_pool: false,
       agent: ''
     });
+    setToast({
+      message: '',
+      type: 'success',
+      isVisible: false,
+    });
     onClose();
   };
 
@@ -523,9 +408,11 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-[#225AE3] to-[#F59E0B] px-8 py-6 text-white">
+      {/* 🔥 FIXED MODAL STRUCTURE */}
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[90vh] flex flex-col">
+        
+        {/* Header - FIXED HEIGHT */}
+        <div className="bg-gradient-to-r from-[#225AE3] to-[#F59E0B] px-8 py-6 text-white flex-shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-2xl font-bold">Create Property Listing</h2>
@@ -554,8 +441,8 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
           </div>
         </div>
 
-        {/* Content */}
-        <div className="p-8 overflow-y-auto max-h-[calc(90vh-200px)]">
+        {/* 🔥 SCROLLABLE CONTENT AREA */}
+        <div className="flex-1 overflow-y-auto px-8 py-6">
           
           {/* Step 1: Image Upload */}
           {currentStep === 1 && (
@@ -570,89 +457,92 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                 className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
                   dragActive 
                     ? 'border-[#225AE3] bg-blue-50' 
-                    : 'border-gray-300 hover:border-gray-400'
+                    : 'border-gray-300 hover:border-[#225AE3]'
                 }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <CloudArrowUpIcon className="mx-auto h-12 w-12 text-gray-400" />
-                <div className="mt-4">
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <span className="mt-2 block text-sm font-medium text-gray-900">
-                      Drag and drop images here, or{' '}
-                      <span className="text-[#225AE3] hover:text-[#225AE3]/80">click to browse</span>
-                    </span>
-                  </label>
-                  <input
-                    id="file-upload"
-                    name="file-upload"
-                    type="file"
-                    multiple
-                    accept="image/*"
-                    className="sr-only"
-                    onChange={handleFileInput}
-                  />
-                </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  PNG, JPG, GIF up to 10MB each • Max 200 images
-                </p>
+                <input
+                  type="file"
+                  id="image-upload"
+                  multiple
+                  accept="image/*"
+                  onChange={handleFileInput}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
                 
-                {isUploading && (
-                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#225AE3] border-t-transparent"></div>
-                  </div>
-                )}
+                <CloudArrowUpIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">
+                  Drop images here or click to browse
+                </h3>
+                <p className="text-gray-500">
+                  Supports JPG, PNG, WebP up to 10MB each
+                </p>
               </div>
+
+              {/* Upload Progress */}
+              {isUploading && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="animate-spin h-5 w-5 border-2 border-[#225AE3] border-t-transparent rounded-full mr-3"></div>
+                    <span className="text-sm text-blue-800">Uploading images...</span>
+                  </div>
+                </div>
+              )}
 
               {/* Uploaded Images Grid */}
               {uploadedImages.length > 0 && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-lg font-semibold text-gray-900">
-                      Uploaded Images ({uploadedImages.length}/200)
-                    </h4>
-                    <p className="text-sm text-gray-500">Click on an image to set as primary</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {uploadedImages.map((image) => (
+                <div>
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                    Uploaded Images ({uploadedImages.length})
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {uploadedImages.map((image, index) => (
                       <div key={image.image_id} className="relative group">
-                        <div 
-                          className={`relative rounded-lg overflow-hidden cursor-pointer transition-all duration-200 ${
-                            image.is_primary 
-                              ? 'ring-4 ring-[#225AE3] ring-offset-2' 
-                              : 'hover:ring-2 hover:ring-gray-300'
-                          }`}
-                          onClick={() => setPrimaryImage(image.image_id)}
-                        >
+                        <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
                           <img
                             src={image.image_url}
                             alt={image.filename}
-                            className="w-full h-24 object-cover"
+                            className="w-full h-full object-cover"
                           />
-                          
-                          {image.is_primary && (
-                            <div className="absolute top-2 left-2">
-                              <StarIcon className="h-5 w-5 text-yellow-400 fill-current" />
-                            </div>
+                        </div>
+                        
+                        {/* Primary Badge */}
+                        {image.is_primary && (
+                          <div className="absolute top-2 left-2 bg-[#225AE3] text-white px-2 py-1 rounded-md text-xs font-medium">
+                            <StarIcon className="h-3 w-3 inline mr-1" />
+                            Primary
+                          </div>
+                        )}
+                        
+                        {/* Actions */}
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                          {!image.is_primary && (
+                            <button
+                              onClick={() => setPrimaryImage(image.image_id)}
+                              className="p-1 bg-white rounded-full shadow-md hover:bg-gray-50"
+                              title="Set as primary"
+                            >
+                              <StarIcon className="h-4 w-4 text-gray-600" />
+                            </button>
                           )}
-                          
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteImage(image.image_id);
-                            }}
-                            className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
+                            onClick={() => deleteImage(image.image_id)}
+                            className="p-1 bg-white rounded-full shadow-md hover:bg-red-50"
+                            title="Delete image"
                           >
-                            <TrashIcon className="h-4 w-4" />
+                            <TrashIcon className="h-4 w-4 text-red-600" />
                           </button>
                         </div>
                         
-                        <p className="mt-2 text-xs text-gray-500 truncate">
-                          {image.filename}
-                        </p>
+                        {/* Filename */}
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-600 truncate" title={image.filename}>
+                            {image.filename}
+                          </p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -681,9 +571,9 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                     name="title"
                     value={formData.title}
                     onChange={handleInputChange}
-                    placeholder="e.g., Beautiful 3BR House in Sandton"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                     required
+                    placeholder="e.g., Beautiful 3-bedroom house in Sandton"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                   />
                 </div>
 
@@ -697,15 +587,15 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    rows={4}
-                    placeholder="Describe the property features, location benefits, and key selling points..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                     required
+                    rows={4}
+                    placeholder="Describe the property features, location benefits, and unique selling points..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                   />
                 </div>
 
-                {/* Location Fields */}
-                <div>
+                {/* Address */}
+                <div className="md:col-span-2">
                   <label htmlFor="street_address" className="block text-sm font-medium text-gray-700 mb-2">
                     Street Address *
                   </label>
@@ -715,12 +605,13 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                     name="street_address"
                     value={formData.street_address}
                     onChange={handleInputChange}
-                    placeholder="123 Main Street"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                     required
+                    placeholder="e.g., 123 Oak Street"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                   />
                 </div>
 
+                {/* Suburb */}
                 <div>
                   <label htmlFor="suburb" className="block text-sm font-medium text-gray-700 mb-2">
                     Suburb *
@@ -731,12 +622,13 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                     name="suburb"
                     value={formData.suburb}
                     onChange={handleInputChange}
-                    placeholder="Sandton"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                     required
+                    placeholder="e.g., Sandton"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                   />
                 </div>
 
+                {/* Province */}
                 <div>
                   <label htmlFor="province" className="block text-sm font-medium text-gray-700 mb-2">
                     Province *
@@ -746,10 +638,10 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                     name="province"
                     value={formData.province}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                     required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                   >
-                    {provinceOptions.map(option => (
+                    {provinceOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -757,6 +649,7 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                   </select>
                 </div>
 
+                {/* Property Type */}
                 <div>
                   <label htmlFor="property_type" className="block text-sm font-medium text-gray-700 mb-2">
                     Property Type *
@@ -766,10 +659,10 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                     name="property_type"
                     value={formData.property_type}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                     required
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                   >
-                    {propertyTypeOptions.map(option => (
+                    {propertyTypeOptions.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
                       </option>
@@ -777,11 +670,11 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                   </select>
                 </div>
 
-                {/* Custom Property Type (if Other is selected) */}
+                {/* Custom Property Type */}
                 {formData.property_type === 'other' && (
                   <div>
                     <label htmlFor="custom_property_type" className="block text-sm font-medium text-gray-700 mb-2">
-                      Custom Property Type
+                      Custom Property Type *
                     </label>
                     <input
                       type="text"
@@ -789,16 +682,17 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                       name="custom_property_type"
                       value={formData.custom_property_type}
                       onChange={handleInputChange}
-                      placeholder="Specify property type"
+                      required={formData.property_type === 'other'}
+                      placeholder="Specify the property type"
                       className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                     />
                   </div>
                 )}
 
-                {/* Property Specifications */}
+                {/* Bedrooms */}
                 <div>
                   <label htmlFor="bedrooms" className="block text-sm font-medium text-gray-700 mb-2">
-                    Bedrooms
+                    Bedrooms *
                   </label>
                   <input
                     type="number"
@@ -812,9 +706,10 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                   />
                 </div>
 
+                {/* Bathrooms */}
                 <div>
                   <label htmlFor="bathrooms" className="block text-sm font-medium text-gray-700 mb-2">
-                    Bathrooms
+                    Bathrooms *
                   </label>
                   <input
                     type="number"
@@ -824,11 +719,11 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                     onChange={handleInputChange}
                     min="0"
                     max="10"
-                    step="0.5"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                   />
                 </div>
 
+                {/* Parking Spaces */}
                 <div>
                   <label htmlFor="parking_spaces" className="block text-sm font-medium text-gray-700 mb-2">
                     Parking Spaces
@@ -867,7 +762,7 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                         onChange={handleInputChange}
                         className="rounded border-gray-300 text-[#225AE3] focus:ring-[#225AE3]"
                       />
-                      <span className="ml-2 text-sm text-gray-700">Swimming Pool</span>
+                      <span className="ml-2 text-gray-700">Swimming Pool</span>
                     </label>
                   </div>
                 </div>
@@ -890,26 +785,45 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                     Assign to Agent *
                   </label>
                   {isLoadingAgents ? (
-                    <div className="w-full px-4 py-3 border border-gray-300 rounded-lg flex items-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-[#225AE3] border-t-transparent mr-2"></div>
-                      Loading agents...
+                    <div className="animate-pulse">
+                      <div className="h-12 bg-gray-200 rounded-lg"></div>
                     </div>
                   ) : (
-                    <select
-                      id="agent"
-                      name="agent"
-                      value={formData.agent}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
-                      required
-                    >
-                      <option value="">Select an agent</option>
-                      {agents.map(agent => (
-                        <option key={agent.id} value={agent.id}>
-                          {agent.first_name} {agent.last_name} ({agent.email})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="space-y-3">
+                      <select
+                        id="agent"
+                        name="agent"
+                        value={formData.agent}
+                        onChange={handleInputChange}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
+                      >
+                        <option value="">Select an agent</option>
+                        {agents.map((agent) => (
+                          <option key={agent.id} value={agent.id}>
+                            {agent.first_name} {agent.last_name} ({agent.email})
+                            {getCurrentUserEmail() === agent.email ? ' (You)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      {/* Show info about auto-assignment */}
+                      {formData.agent && agents.find(a => a.id === formData.agent)?.email === getCurrentUserEmail() && (
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <div className="flex">
+                            <div className="flex-shrink-0">
+                              <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                            <div className="ml-3">
+                              <p className="text-sm text-blue-800">
+                                This property will be assigned to you as the primary agent.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -919,34 +833,35 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                     Listing Price (ZAR) *
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500 sm:text-sm">R</span>
-                    </div>
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">R</span>
                     <input
-                      type="number"
+                      type="text"
                       id="listing_price"
                       name="listing_price"
                       value={formData.listing_price}
-                      onChange={handleInputChange}
-                      placeholder="2500000"
-                      min="0"
-                      step="1000"
-                      className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '');
+                        const formatted = value.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+                        setFormData(prev => ({ ...prev, listing_price: formatted }));
+                      }}
                       required
+                      placeholder="1 500 000"
+                      className="w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#225AE3] focus:border-transparent"
                     />
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">Enter the price without currency symbol</p>
                 </div>
               </div>
 
               {/* Summary */}
               <div className="bg-gray-50 rounded-xl p-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Property Summary</h4>
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Listing Summary</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="font-medium text-gray-700">Title:</span> {formData.title || 'Not set'}
+                    <span className="font-medium text-gray-700">Title:</span> {formData.title || 'Not specified'}
                   </div>
                   <div>
-                    <span className="font-medium text-gray-700">Location:</span> {formData.suburb || 'Not set'}, {provinceOptions.find(p => p.value === formData.province)?.label}
+                    <span className="font-medium text-gray-700">Location:</span> {formData.suburb}, {provinceOptions.find(p => p.value === formData.province)?.label}
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Type:</span> {propertyTypeOptions.find(p => p.value === formData.property_type)?.label}
@@ -959,6 +874,9 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                   </div>
                   <div>
                     <span className="font-medium text-gray-700">Agent:</span> {agents.find(a => a.id === formData.agent)?.first_name} {agents.find(a => a.id === formData.agent)?.last_name || 'Not assigned'}
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Price:</span> R {formData.listing_price || 'Not specified'}
                   </div>
                 </div>
               </div>
@@ -979,15 +897,17 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
           )}
         </div>
 
-        {/* Footer */}
-        <div className="bg-gray-50 px-8 py-6 border-t border-gray-200">
+        {/* 🔥 FIXED FOOTER - ALWAYS VISIBLE */}
+        <div className="bg-gray-50 px-8 py-6 border-t border-gray-200 flex-shrink-0">
           <div className="flex items-center justify-between">
+            {/* Progress Indicators */}
             <div className="flex space-x-3">
-              <div className={`w-3 h-3 rounded-full ${currentStep >= 1 ? 'bg-[#225AE3]' : 'bg-gray-300'}`} />
-              <div className={`w-3 h-3 rounded-full ${currentStep >= 2 ? 'bg-[#225AE3]' : 'bg-gray-300'}`} />
-              <div className={`w-3 h-3 rounded-full ${currentStep >= 3 ? 'bg-[#225AE3]' : 'bg-gray-300'}`} />
+              <div className={`w-3 h-3 rounded-full transition-colors ${currentStep >= 1 ? 'bg-[#225AE3]' : 'bg-gray-300'}`} />
+              <div className={`w-3 h-3 rounded-full transition-colors ${currentStep >= 2 ? 'bg-[#225AE3]' : 'bg-gray-300'}`} />
+              <div className={`w-3 h-3 rounded-full transition-colors ${currentStep >= 3 ? 'bg-[#225AE3]' : 'bg-gray-300'}`} />
             </div>
 
+            {/* Navigation Buttons */}
             <div className="flex space-x-4">
               {currentStep > 1 && (
                 <button
@@ -1005,7 +925,7 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                   disabled={!validateStep()}
                   className={`inline-flex items-center px-6 py-3 font-medium rounded-lg transition-all ${
                     validateStep()
-                      ? 'bg-[#225AE3] text-white hover:bg-[#225AE3]/90'
+                      ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
@@ -1014,17 +934,17 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                 </button>
               ) : (
                 <button
-                  onClick={createPropertyListing}
+                  onClick={handleSubmit}
                   disabled={!validateStep() || isSubmitting}
-                  className={`inline-flex items-center px-6 py-3 font-medium rounded-lg transition-all ${
+                  className={`inline-flex items-center px-8 py-3 font-bold rounded-lg transition-all ${
                     validateStep() && !isSubmitting
-                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
                       Creating...
                     </>
                   ) : (
@@ -1040,7 +960,7 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
         </div>
       </div>
 
-      {/* Toast Component */}
+      {/* Toast */}
       {toast.isVisible && (
         <Toast
           message={toast.message}
@@ -1052,4 +972,4 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
   );
 };
 
-export default PropertyListingWizard;
+export default PropertyListingWizard; 
