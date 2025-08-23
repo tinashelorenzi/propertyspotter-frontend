@@ -219,14 +219,15 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
   const handleFiles = async (files: File[]) => {
     if (!draft) return;
 
+    // Upload all images as non-primary initially
     for (const file of files) {
       if (file.type.startsWith('image/')) {
-        await uploadImage(file);
+        await uploadImage(file, false); // Explicitly false for all uploads
       }
     }
   };
 
-  const uploadImage = async (file: File) => {
+  const uploadImage = async (file: File, shouldBePrimary: boolean = false) => {
     if (!draft) return;
 
     try {
@@ -242,15 +243,15 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
         return;
       }
 
-      const isPrimary = uploadedImages.length === 0;
-      const imageData = await propertyService.uploadImageToDraft(draft.id, file, isPrimary);
+      // Upload image with explicit primary flag (defaults to false)
+      const imageData = await propertyService.uploadImageToDraft(draft.id, file, shouldBePrimary);
       
       const newImage: UploadedImage = {
         image_id: imageData.image_id,
         image_url: imageData.image_url,
         filename: imageData.filename,
         size: imageData.size,
-        is_primary: imageData.is_primary,
+        is_primary: imageData.is_primary || false, // Ensure it's never undefined
         order: imageData.order,
       };
 
@@ -333,7 +334,30 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
   const validateStep = () => {
     switch (currentStep) {
       case 1:
-        return uploadedImages.length > 0;
+        // Require at least one image AND at least one primary image
+        const hasImages = uploadedImages.length > 0;
+        const hasPrimaryImage = uploadedImages.some(img => img.is_primary);
+        
+        if (!hasImages) {
+          setToast({
+            message: 'Please upload at least one image.',
+            type: 'error',
+            isVisible: true,
+          });
+          return false;
+        }
+        
+        if (!hasPrimaryImage) {
+          setToast({
+            message: 'Please select a primary image by clicking the star on one of your uploaded images.',
+            type: 'error',
+            isVisible: true,
+          });
+          return false;
+        }
+        
+        return true;
+        
       case 2:
         return !!(formData.title && formData.description && formData.suburb && formData.street_address);
       case 3:
@@ -495,13 +519,24 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
               {/* Uploaded Images Grid */}
               {uploadedImages.length > 0 && (
                 <div>
-                  <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                    Uploaded Images ({uploadedImages.length})
-                  </h4>
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-lg font-semibold text-gray-900">
+                      Uploaded Images ({uploadedImages.length})
+                    </h4>
+                    {!uploadedImages.some(img => img.is_primary) && (
+                      <div className="text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-md border border-amber-200">
+                        ⚠️ No primary image selected. Click a star to set one.
+                      </div>
+                    )}
+                  </div>
+                  
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {uploadedImages.map((image, index) => (
                       <div key={image.image_id} className="relative group">
-                        <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
+                        <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden border-2 transition-colors duration-200"
+                             style={{
+                               borderColor: image.is_primary ? '#225AE3' : '#e5e7eb'
+                             }}>
                           <img
                             src={image.image_url}
                             alt={image.filename}
@@ -511,29 +546,39 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                         
                         {/* Primary Badge */}
                         {image.is_primary && (
-                          <div className="absolute top-2 left-2 bg-[#225AE3] text-white px-2 py-1 rounded-md text-xs font-medium">
-                            <StarIcon className="h-3 w-3 inline mr-1" />
+                          <div className="absolute top-2 left-2 bg-[#225AE3] text-white px-2 py-1 rounded-md text-xs font-medium flex items-center">
+                            <StarIcon className="h-3 w-3 mr-1" />
                             Primary
                           </div>
                         )}
                         
                         {/* Actions */}
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1 z-10">
                           {!image.is_primary && (
                             <button
-                              onClick={() => setPrimaryImage(image.image_id)}
-                              className="p-1 bg-white rounded-full shadow-md hover:bg-gray-50"
-                              title="Set as primary"
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setPrimaryImage(image.image_id);
+                              }}
+                              className="p-2 bg-white rounded-full shadow-lg hover:bg-yellow-50 hover:shadow-xl transition-all duration-200"
+                              title="Set as primary image"
                             >
-                              <StarIcon className="h-4 w-4 text-gray-600" />
+                              <StarIcon className="h-4 w-4 text-gray-400 hover:text-yellow-500" />
                             </button>
                           )}
                           <button
-                            onClick={() => deleteImage(image.image_id)}
-                            className="p-1 bg-white rounded-full shadow-md hover:bg-red-50"
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              deleteImage(image.image_id);
+                            }}
+                            className="p-2 bg-white rounded-full shadow-lg hover:bg-red-50 hover:shadow-xl transition-all duration-200"
                             title="Delete image"
                           >
-                            <TrashIcon className="h-4 w-4 text-red-600" />
+                            <TrashIcon className="h-4 w-4 text-red-500 hover:text-red-600" />
                           </button>
                         </div>
                         
@@ -545,6 +590,14 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
                         </div>
                       </div>
                     ))}
+                  </div>
+                  
+                  {/* Help Text */}
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <p className="text-sm text-blue-800">
+                      💡 <strong>Tip:</strong> Hover over any image and click the star to set it as the primary image. 
+                      The primary image will be the main photo displayed in property listings.
+                    </p>
                   </div>
                 </div>
               )}

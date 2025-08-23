@@ -117,7 +117,14 @@ class PropertyService {
     const formData = new FormData();
     formData.append('image', file);
     formData.append('alt_text', file.name);
-    formData.append('is_primary', isPrimary.toString());
+    
+    // Only send is_primary if it's explicitly true
+    // This prevents accidentally setting multiple images as primary
+    if (isPrimary) {
+      formData.append('is_primary', 'true');
+    } else {
+      formData.append('is_primary', 'false'); // Explicitly set to false
+    }
 
     const response = await fetch(`${API_BASE}api/listings/agency-admin/drafts/${draftId}/images/upload/`, {
       method: 'POST',
