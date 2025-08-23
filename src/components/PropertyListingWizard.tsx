@@ -320,8 +320,17 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
   };
 
   const nextStep = () => {
-    if (currentStep < 3 && validateStep()) {
-      setCurrentStep(currentStep + 1);
+    if (currentStep < 3) {
+      const validation = validateStep();
+      if (validation.isValid) {
+        setCurrentStep(currentStep + 1);
+      } else {
+        setToast({
+          message: validation.message,
+          type: 'error',
+          isVisible: true,
+        });
+      }
     }
   };
 
@@ -339,36 +348,38 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
         const hasPrimaryImage = uploadedImages.some(img => img.is_primary);
         
         if (!hasImages) {
-          setToast({
-            message: 'Please upload at least one image.',
-            type: 'error',
-            isVisible: true,
-          });
-          return false;
+          return { isValid: false, message: 'Please upload at least one image.' };
         }
         
         if (!hasPrimaryImage) {
-          setToast({
-            message: 'Please select a primary image by clicking the star on one of your uploaded images.',
-            type: 'error',
-            isVisible: true,
-          });
-          return false;
+          return { isValid: false, message: 'Please select a primary image by clicking the star on one of your uploaded images.' };
         }
         
-        return true;
+        return { isValid: true };
         
       case 2:
-        return !!(formData.title && formData.description && formData.suburb && formData.street_address);
+        const hasRequiredFields = !!(formData.title && formData.description && formData.suburb && formData.street_address);
+        return { isValid: hasRequiredFields, message: hasRequiredFields ? '' : 'Please fill in all required fields.' };
       case 3:
-        return !!(formData.listing_price);
+        const hasPrice = !!(formData.listing_price);
+        return { isValid: hasPrice, message: hasPrice ? '' : 'Please enter a listing price.' };
       default:
-        return true;
+        return { isValid: true };
     }
   };
 
   const handleSubmit = async () => {
-    if (!draft || !validateStep()) return;
+    if (!draft) return;
+    
+    const validation = validateStep();
+    if (!validation.isValid) {
+      setToast({
+        message: validation.message,
+        type: 'error',
+        isVisible: true,
+      });
+      return;
+    }
 
     try {
       setIsSubmitting(true);
@@ -975,9 +986,9 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
               {currentStep < 3 ? (
                 <button
                   onClick={nextStep}
-                  disabled={!validateStep()}
+                  disabled={!validateStep().isValid}
                   className={`inline-flex items-center px-6 py-3 font-medium rounded-lg transition-all ${
-                    validateStep()
+                    validateStep().isValid
                       ? 'bg-gradient-to-r from-[#225AE3] to-[#F59E0B] text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
@@ -988,9 +999,9 @@ const PropertyListingWizard: React.FC<PropertyListingWizardProps> = ({
               ) : (
                 <button
                   onClick={handleSubmit}
-                  disabled={!validateStep() || isSubmitting}
+                  disabled={!validateStep().isValid || isSubmitting}
                   className={`inline-flex items-center px-8 py-3 font-bold rounded-lg transition-all ${
-                    validateStep() && !isSubmitting
+                    validateStep().isValid && !isSubmitting
                       ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg hover:shadow-xl transform hover:-translate-y-0.5'
                       : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   }`}
