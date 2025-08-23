@@ -471,10 +471,13 @@ const PropertyListingsPage: React.FC = () => {
                     <div className="pt-4 border-t border-gray-100">
                       <div className="flex items-center">
                         <div className="w-8 h-8 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] rounded-full flex items-center justify-center text-white text-sm font-bold mr-3">
-                          {property.agent_name ? property.agent_name.charAt(0) : 'A'}
+                          {property.agent_name 
+                            ? property.agent_name.charAt(0) 
+                            : 'PS'
+                          }
                         </div>
                         <span className="text-sm text-gray-600 font-medium">
-                          Agent: {property.agent_name || 'Unknown'}
+                          Agent: {property.agent_name || 'PropertySpotter Agent'}
                         </span>
                       </div>
                     </div>
