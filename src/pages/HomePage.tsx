@@ -1,6 +1,9 @@
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar';
 import RecentBlogPosts from '../components/RecentBlogPosts';
+import TrustBlock from '../components/TrustBlock';
+import AudienceSelector from '../components/AudienceSelector';
+import company from '../config/company';
 
 const features = [
   {
@@ -128,9 +131,9 @@ export default function HomePage() {
 
           {/* Subheading */}
           <p className="text-xl md:text-2xl text-gray-700 mb-12 max-w-3xl mx-auto leading-relaxed animate-fade-in-up delay-200">
-            Turn your daily walks into real income. PropertySpotter connects you with 
-            <span className="font-semibold text-[#225AE3]"> lucrative property opportunities</span> — 
-            no experience needed, just your smartphone and keen eyes.
+            See a home with a For Sale sign? Snap a photo, send us the details, and
+            <span className="font-semibold text-[#225AE3]"> earn a cash reward</span> when it
+            leads to a successful sale. No experience needed — just your phone.
           </p>
 
           {/* CTA Buttons */}
@@ -161,6 +164,23 @@ export default function HomePage() {
             </Link>
           </div>
 
+          {/* PPRA Trust Signal */}
+          <a
+            href="#trust"
+            className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-5 py-3 mb-16 bg-white/80 backdrop-blur-sm rounded-2xl border border-[#225AE3]/20 shadow-lg animate-fade-in-up delay-300 hover:border-[#225AE3]/50 transition-colors duration-200"
+          >
+            <span className="inline-flex items-center text-sm font-semibold text-gray-800">
+              <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              PPRA-registered estate agency
+            </span>
+            <span className="hidden sm:inline text-gray-300">|</span>
+            <span className="text-sm text-gray-600">
+              Fidelity Fund Certificate {company.ppra.certificateNumber}
+            </span>
+          </a>
+
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6 animate-fade-in-up delay-400">
             {stats.map((stat, idx) => (
@@ -184,6 +204,12 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Audience Selector — clear paths for Spotters, Agents, Sellers */}
+      <AudienceSelector />
+
+      {/* Trust & Credibility Section */}
+      <TrustBlock />
 
       {/* Features Section */}
       <section className="relative py-24 bg-white">
@@ -366,10 +392,29 @@ export default function HomePage() {
                   <p className="text-gray-400">Your property, our treasure</p>
                 </div>
               </div>
-              <p className="text-gray-400 leading-relaxed max-w-md">
-                Connecting property spotters with real estate opportunities across South Africa. 
+              <p className="text-gray-400 leading-relaxed max-w-md mb-6">
+                Connecting property spotters with real estate opportunities across South Africa.
                 Turn your neighborhood knowledge into steady income.
               </p>
+              {/* Credentials */}
+              <div className="space-y-1.5 text-sm text-gray-400">
+                <p className="font-semibold text-gray-300">Registered &amp; regulated</p>
+                <p>PPRA {company.ppra.certificateType} · {company.ppra.certificateNumber}</p>
+                <p>{company.address.full}</p>
+                <p>
+                  <a href={company.contact.telHref} className="hover:text-[#225AE3] transition-colors duration-200">{company.contact.tel}</a>
+                  {' · '}
+                  <a href={company.contact.emailHref} className="hover:text-[#225AE3] transition-colors duration-200">{company.contact.email}</a>
+                </p>
+                <a
+                  href={company.ppra.certificateUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block pt-1 text-[#225AE3] hover:text-[#F59E0B] transition-colors duration-200"
+                >
+                  View PPRA Certificate →
+                </a>
+              </div>
             </div>
             
             <div>

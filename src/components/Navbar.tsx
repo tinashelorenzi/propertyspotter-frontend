@@ -65,11 +65,18 @@ export default function Navbar() {
                 Blog
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] transition-all duration-300 group-hover:w-full"></span>
               </Link>
-              <Link 
-                to="/how-it-works" 
+              <Link
+                to="/how-it-works"
                 className="relative text-gray-700 hover:text-[#225AE3] font-medium transition-colors duration-200 group"
               >
                 How It Works
+                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] transition-all duration-300 group-hover:w-full"></span>
+              </Link>
+              <Link
+                to="/for-agents"
+                className="relative text-gray-700 hover:text-[#225AE3] font-medium transition-colors duration-200 group"
+              >
+                For Agents
                 <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#225AE3] to-[#F59E0B] transition-all duration-300 group-hover:w-full"></span>
               </Link>
             </div>
@@ -128,14 +135,21 @@ export default function Navbar() {
             >
               How It Works
             </Link>
-            <Link 
-              to="/blog" 
-              className="text-gray-700 hover:text-[#225AE3] font-medium text-lg py-2 px-4 rounded-lg hover:bg-[#E9EEFB]/50 transition-all duration-200" 
+            <Link
+              to="/blog"
+              className="text-gray-700 hover:text-[#225AE3] font-medium text-lg py-2 px-4 rounded-lg hover:bg-[#E9EEFB]/50 transition-all duration-200"
               onClick={() => setMenuOpen(false)}
             >
               Blog
             </Link>
-            
+            <Link
+              to="/for-agents"
+              className="text-gray-700 hover:text-[#225AE3] font-medium text-lg py-2 px-4 rounded-lg hover:bg-[#E9EEFB]/50 transition-all duration-200"
+              onClick={() => setMenuOpen(false)}
+            >
+              For Agents
+            </Link>
+
             <div className="pt-4 border-t border-gray-200/50 space-y-3">
               <Link 
                 to="/login" 

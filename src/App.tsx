@@ -20,6 +20,7 @@ import DataProcessingAgreementPage from './pages/DataProcessingAgreement';
 import ContactUsPage from './pages/ContactUsPage';
 import PropertyListingsPage from './pages/PropertyListingsPage';
 import PropertyDetailPage from './pages/PropertyDetailPage';
+import ForAgentsPage from './pages/ForAgentsPage';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -60,6 +61,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/how-it-works" element={<HowItWorksPage />} />
+      <Route path="/for-agents" element={<ForAgentsPage />} />
       <Route path="/properties" element={<PropertyListingsPage />} />
       <Route path="/property/:id" element={<PropertyDetailPage />} />
       <Route path="/blog" element={<BlogPage />} />
