@@ -76,9 +76,9 @@ const LoginPage = () => {
           isVisible: true,
         });
 
-        // Redirect to dashboard after a short delay
+        // Redirect to the right dashboard after a short delay
         setTimeout(() => {
-          navigate('/dashboard');
+          navigate(data.user.role === 'Admin' ? '/admin' : '/dashboard');
         }, 1500);
       } else {
         setToast({

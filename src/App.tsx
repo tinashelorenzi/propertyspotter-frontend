@@ -21,6 +21,12 @@ import ContactUsPage from './pages/ContactUsPage';
 import PropertyListingsPage from './pages/PropertyListingsPage';
 import PropertyDetailPage from './pages/PropertyDetailPage';
 import ForAgentsPage from './pages/ForAgentsPage';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminOverview from './pages/admin/AdminOverview';
+import AdminLeads from './pages/admin/AdminLeads';
+import AdminListings from './pages/admin/AdminListings';
+import AdminCommissions from './pages/admin/AdminCommissions';
+import AdminPeople from './pages/admin/AdminPeople';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -39,8 +45,32 @@ const AgencyRoute = ({ children }: { children: React.ReactNode }) => {
   if (!user) {
     return <Navigate to="/agency-login" />;
   }
+  if (user.role === 'Admin') {
+    return <Navigate to="/admin" />;
+  }
   if (user.role !== 'Agency_Admin') {
     return <Navigate to="/agent-dashboard" />;
+  }
+  return <>{children}</>;
+};
+
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#225AE3]"></div>
+      </div>
+    );
+  }
+  // Fall back to localStorage for sessions started from the agency login page,
+  // which writes the user without going through AuthContext.
+  const currentUser = user ?? JSON.parse(localStorage.getItem('user') || 'null');
+  if (!currentUser) {
+    return <Navigate to="/agency-login" />;
+  }
+  if (currentUser.role !== 'Admin') {
+    return <Navigate to="/dashboard" />;
   }
   return <>{children}</>;
 };
@@ -49,6 +79,9 @@ const AgentRoute = ({ children }: { children: React.ReactNode }) => {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   if (!user) {
     return <Navigate to="/agency-login" />;
+  }
+  if (user.role === 'Admin') {
+    return <Navigate to="/admin" />;
   }
   if (user.role !== 'Agent') {
     return <Navigate to="/agency-dashboard" />;
@@ -89,6 +122,20 @@ const AppRoutes = () => {
           </AgentRoute>
         }
       />
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminLayout />
+          </AdminRoute>
+        }
+      >
+        <Route index element={<AdminOverview />} />
+        <Route path="leads" element={<AdminLeads />} />
+        <Route path="listings" element={<AdminListings />} />
+        <Route path="commissions" element={<AdminCommissions />} />
+        <Route path="people" element={<AdminPeople />} />
+      </Route>
       <Route
         path="/dashboard"
         element={

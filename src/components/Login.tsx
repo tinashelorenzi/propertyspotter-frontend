@@ -82,9 +82,16 @@ const Login = () => {
 
       if (response.ok) {
         login(data.token, data.user);
-        
+        // Mirror the key the agency portal uses so both sessions share a token
+        localStorage.setItem('token', data.token);
+        if (data.user.agency) {
+          localStorage.setItem('agency', JSON.stringify(data.user.agency));
+        }
+
         // Route based on user role
-        if (data.user.role === 'Spotter') {
+        if (data.user.role === 'Admin') {
+          navigate('/admin');
+        } else if (data.user.role === 'Spotter') {
           navigate('/dashboard');
         } else if (data.user.role === 'Agency_Admin') {
           navigate('/agency-dashboard');

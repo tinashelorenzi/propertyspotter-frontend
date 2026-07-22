@@ -26,7 +26,7 @@ interface LoginResponse {
     id: string;
     email: string;
     username: string;
-    role: 'Agency_Admin' | 'Agent' | 'Spotter';
+    role: 'Admin' | 'Agency_Admin' | 'Agent' | 'Spotter';
     first_name: string;
     last_name: string;
     is_active: boolean;
@@ -91,11 +91,14 @@ const AgencyLoginPage = () => {
 
       // Store the token and user data
       localStorage.setItem('token', token);
+      localStorage.setItem('authToken', token);
       localStorage.setItem('user', JSON.stringify(user));
       localStorage.setItem('agency', JSON.stringify(user.agency));
 
       // Route based on user role
-      if (user.role === 'Spotter') {
+      if (user.role === 'Admin') {
+        navigate('/admin');
+      } else if (user.role === 'Spotter') {
         navigate('/dashboard');
       } else if (user.role === 'Agency_Admin') {
         navigate('/agency-dashboard');
