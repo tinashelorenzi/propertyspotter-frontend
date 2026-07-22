@@ -27,6 +27,8 @@ import AdminLeads from './pages/admin/AdminLeads';
 import AdminListings from './pages/admin/AdminListings';
 import AdminCommissions from './pages/admin/AdminCommissions';
 import AdminPeople from './pages/admin/AdminPeople';
+import StaffLoginPage from './pages/StaffLoginPage';
+import { STAFF_LOGIN_PATH, STAFF_PORTAL_PATH } from './config/adminRoutes';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
@@ -46,7 +48,7 @@ const AgencyRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/agency-login" />;
   }
   if (user.role === 'Admin') {
-    return <Navigate to="/admin" />;
+    return <Navigate to={STAFF_PORTAL_PATH} />;
   }
   if (user.role !== 'Agency_Admin') {
     return <Navigate to="/agent-dashboard" />;
@@ -66,11 +68,8 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   // Fall back to localStorage for sessions started from the agency login page,
   // which writes the user without going through AuthContext.
   const currentUser = user ?? JSON.parse(localStorage.getItem('user') || 'null');
-  if (!currentUser) {
-    return <Navigate to="/agency-login" />;
-  }
-  if (currentUser.role !== 'Admin') {
-    return <Navigate to="/dashboard" />;
+  if (!currentUser || currentUser.role !== 'Admin') {
+    return <Navigate to={STAFF_LOGIN_PATH} replace />;
   }
   return <>{children}</>;
 };
@@ -81,7 +80,7 @@ const AgentRoute = ({ children }: { children: React.ReactNode }) => {
     return <Navigate to="/agency-login" />;
   }
   if (user.role === 'Admin') {
-    return <Navigate to="/admin" />;
+    return <Navigate to={STAFF_PORTAL_PATH} />;
   }
   if (user.role !== 'Agent') {
     return <Navigate to="/agency-dashboard" />;
@@ -122,8 +121,9 @@ const AppRoutes = () => {
           </AgentRoute>
         }
       />
+      <Route path={STAFF_LOGIN_PATH} element={<StaffLoginPage />} />
       <Route
-        path="/admin"
+        path={STAFF_PORTAL_PATH}
         element={
           <AdminRoute>
             <AdminLayout />

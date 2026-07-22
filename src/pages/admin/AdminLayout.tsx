@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import { getStoredUser } from '../../services/adminApi';
+import { adminApi, getStoredUser } from '../../services/adminApi';
+import { STAFF_LOGIN_PATH } from '../../config/adminRoutes';
 
 const NAV_ITEMS = [
   {
@@ -85,11 +86,19 @@ const AdminLayout = () => {
     .join('')
     .toUpperCase();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Revoke the token server-side so signing out is not client-side only.
+    // A network failure must never trap someone in the dashboard, so the local
+    // session is cleared either way.
+    try {
+      await adminApi.logout();
+    } catch {
+      // ignore — clearing the local session below is what matters
+    }
     logout();
     localStorage.removeItem('token');
     localStorage.removeItem('agency');
-    navigate('/agency-login');
+    navigate(STAFF_LOGIN_PATH, { replace: true });
   };
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>

@@ -1,0 +1,77 @@
+# PropertySpotter frontend — single-page app on Apache/cPanel.
+# Lives in public/ so `npm run build` copies it into dist/ on every build.
+
+RewriteEngine On
+RewriteBase /
+
+# ---------------------------------------------------------------------------
+# SPA fallback
+# ---------------------------------------------------------------------------
+# Client-side routes (/admin, /admin/leads, /properties/…) have no file on disk,
+# so they must fall through to index.html and let React Router take over.
+#
+# The two conditions below are what keep this safe: a request that maps to a
+# real file or directory is served as-is. Without them a missing asset returns
+# index.html with a text/html content type, and the browser rejects it with
+# "Expected a JavaScript-or-Wasm module script but the server responded with a
+# MIME type of text/html" — which hides the real problem (the file is missing).
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+RewriteRule ^ index.html [L]
+
+# ---------------------------------------------------------------------------
+# MIME types
+# ---------------------------------------------------------------------------
+# Vite emits ES modules; some cPanel images serve .js as text/plain and have no
+# mapping for .mjs at all, which trips strict module MIME checking.
+<IfModule mod_mime.c>
+    AddType application/javascript .js
+    AddType application/javascript .mjs
+    AddType text/css              .css
+    AddType application/json      .json
+    AddType image/svg+xml         .svg
+    AddType font/woff             .woff
+    AddType font/woff2            .woff2
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Caching
+# ---------------------------------------------------------------------------
+<IfModule mod_headers.c>
+    # Asset filenames carry a content hash, so they can be cached forever.
+    <FilesMatch "\.(js|mjs|css|woff2?|svg|png|jpe?g|gif|webp|ico)$">
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+
+    # index.html must never be cached: it is the file that names the hashed
+    # assets. A stale copy points at hashes that no longer exist on disk and
+    # reproduces the MIME error above after every deploy.
+    <FilesMatch "^index\.html$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Compression
+# ---------------------------------------------------------------------------
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml
+    AddOutputFilterByType DEFLATE application/javascript application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
+</IfModule>
+
+# ---------------------------------------------------------------------------
+# Misc
+# ---------------------------------------------------------------------------
+Options -Indexes
+ErrorDocument 404 /index.html
+
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

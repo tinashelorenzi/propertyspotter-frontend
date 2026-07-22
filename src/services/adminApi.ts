@@ -420,7 +420,44 @@ function toList<T>(payload: unknown): T[] {
 // Endpoints
 // ---------------------------------------------------------------------------
 
+export interface StaffLoginResponse {
+  token: string;
+  user: AdminUser & { is_staff?: boolean; is_superuser?: boolean };
+}
+
 export const adminApi = {
+  // ---- Authentication ----
+  /**
+   * Staff sign-in. Takes a username (not an email) like the Django admin login
+   * it replaces, and refuses anyone without admin rights.
+   */
+  login: (credentials: { username: string; password: string; turnstileToken?: string }) =>
+    fetch(`${STAFF}auth/login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    }).then(async (response) => {
+      const text = await response.text();
+      let payload: unknown = null;
+      try {
+        payload = text ? JSON.parse(text) : null;
+      } catch {
+        payload = text;
+      }
+      if (!response.ok) {
+        throw new ApiError(
+          extractMessage(payload, 'Sign in failed'),
+          response.status,
+          payload
+        );
+      }
+      return payload as StaffLoginResponse;
+    }),
+
+  session: () => request<{ user: AdminUser }>('auth/session/'),
+
+  logout: () => request<{ message: string }>('auth/logout/', { method: 'POST', body: '{}' }),
+
   // ---- Dashboard ----
   overview: () => request<DashboardOverview>('dashboard/overview/'),
 
